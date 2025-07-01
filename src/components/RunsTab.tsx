@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Star, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, Star, Play, Copy, Clipboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -23,6 +23,8 @@ export const RunsTab = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
   const [currentPromptId, setCurrentPromptId] = useState<number | null>(null);
+  const [originalPromptText, setOriginalPromptText] = useState("");
+  const [isStarred, setIsStarred] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -72,6 +74,7 @@ export const RunsTab = () => {
       setNotes(run.notes || "");
       setOutput(run.output || "");
       setSelectedInputId(run.book_input_id?.toString() || "");
+      setIsStarred(run.human_tags?.includes("star") || false);
 
       // Load the prompt for this run
       if (run.prompt_id) {
@@ -84,6 +87,7 @@ export const RunsTab = () => {
         if (error) throw error;
         if (prompt) {
           setPromptText(prompt.user_prompt || "");
+          setOriginalPromptText(prompt.user_prompt || "");
           setCurrentPromptId(prompt.id);
         }
       }
@@ -92,36 +96,57 @@ export const RunsTab = () => {
     }
   };
 
-  // Auto-save prompt changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (promptText.trim() && currentPromptId) {
-        savePrompt();
-      }
-    }, 2000);
+  const hasPromptChanged = () => {
+    return promptText !== originalPromptText;
+  };
 
-    return () => clearTimeout(timer);
-  }, [promptText, currentPromptId]);
-
-  const savePrompt = async () => {
-    if (!currentPromptId) return;
+  const saveNewPromptIfChanged = async () => {
+    if (!hasPromptChanged()) return currentPromptId;
 
     try {
-      const { error } = await supabase
+      const { data: newPrompt, error } = await supabase
         .from("prompt")
-        .update({ user_prompt: promptText })
-        .eq("id", currentPromptId);
+        .insert({
+          user_prompt: promptText,
+          label: "Generated Prompt"
+        })
+        .select()
+        .single();
 
       if (error) throw error;
-
-      toast({
-        title: "Prompt auto-saved",
-        duration: 1000,
-      });
+      
+      setCurrentPromptId(newPrompt.id);
+      setOriginalPromptText(promptText);
+      
+      // Update the current run to point to the new prompt
+      if (runs[currentRunIndex]) {
+        await supabase
+          .from("run")
+          .update({ prompt_id: newPrompt.id })
+          .eq("id", runs[currentRunIndex].id);
+        
+        setRuns(prev => prev.map((run, index) => 
+          index === currentRunIndex 
+            ? { ...run, prompt_id: newPrompt.id }
+            : run
+        ));
+      }
+      
+      return newPrompt.id;
     } catch (error) {
-      console.error("Error saving prompt:", error);
+      console.error("Error saving new prompt:", error);
+      throw error;
     }
   };
+
+  // Save prompt when leaving the screen
+  useEffect(() => {
+    return () => {
+      if (hasPromptChanged()) {
+        saveNewPromptIfChanged();
+      }
+    };
+  }, []);
 
   const saveNotes = async (runId: number, notesText: string) => {
     try {
@@ -139,10 +164,51 @@ export const RunsTab = () => {
   const handleNotesChange = (value: string) => {
     setNotes(value);
     if (runs[currentRunIndex]) {
-      // Auto-save notes after a delay
       setTimeout(() => {
         saveNotes(runs[currentRunIndex].id, value);
       }, 1000);
+    }
+  };
+
+  const toggleStar = async () => {
+    if (!runs[currentRunIndex]) return;
+
+    const currentRun = runs[currentRunIndex];
+    const currentTags = currentRun.human_tags || [];
+    const newIsStarred = !isStarred;
+    
+    let newTags;
+    if (newIsStarred) {
+      newTags = [...currentTags.filter(tag => tag !== "star"), "star"];
+    } else {
+      newTags = currentTags.filter(tag => tag !== "star");
+    }
+
+    try {
+      const { error } = await supabase
+        .from("run")
+        .update({ human_tags: newTags })
+        .eq("id", currentRun.id);
+
+      if (error) throw error;
+
+      setIsStarred(newIsStarred);
+      setRuns(prev => prev.map((run, index) => 
+        index === currentRunIndex 
+          ? { ...run, human_tags: newTags }
+          : run
+      ));
+
+      toast({
+        title: newIsStarred ? "Run starred" : "Run unstarred",
+        duration: 1000,
+      });
+    } catch (error) {
+      console.error("Error toggling star:", error);
+      toast({
+        title: "Error updating star",
+        variant: "destructive",
+      });
     }
   };
 
@@ -158,48 +224,8 @@ export const RunsTab = () => {
     setIsRunning(true);
     
     try {
-      // Create or update prompt
-      let promptId = currentPromptId;
-      
-      if (!promptId) {
-        // Create new prompt
-        const { data: newPrompt, error: promptError } = await supabase
-          .from("prompt")
-          .insert({
-            user_prompt: promptText,
-            label: "Generated Prompt"
-          })
-          .select()
-          .single();
-
-        if (promptError) throw promptError;
-        promptId = newPrompt.id;
-        setCurrentPromptId(promptId);
-      } else {
-        // Check if prompt has changed, create new one if it has
-        const { data: existingPrompt, error } = await supabase
-          .from("prompt")
-          .select("user_prompt")
-          .eq("id", promptId)
-          .single();
-
-        if (error) throw error;
-
-        if (existingPrompt.user_prompt !== promptText) {
-          const { data: newPrompt, error: promptError } = await supabase
-            .from("prompt")
-            .insert({
-              user_prompt: promptText,
-              label: "Generated Prompt"
-            })
-            .select()
-            .single();
-
-          if (promptError) throw promptError;
-          promptId = newPrompt.id;
-          setCurrentPromptId(promptId);
-        }
-      }
+      // Save new prompt if changed
+      const promptId = await saveNewPromptIfChanged();
 
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -241,6 +267,11 @@ export const RunsTab = () => {
   };
 
   const navigateRun = async (direction: "previous" | "next") => {
+    // Save prompt if changed before navigating
+    if (hasPromptChanged()) {
+      await saveNewPromptIfChanged();
+    }
+
     const newIndex = direction === "previous" 
       ? currentRunIndex - 1 
       : currentRunIndex + 1;
@@ -248,6 +279,52 @@ export const RunsTab = () => {
     if (newIndex >= 0 && newIndex < runs.length) {
       setCurrentRunIndex(newIndex);
       await loadRun(runs[newIndex]);
+    }
+  };
+
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(promptText);
+      toast({
+        title: "Prompt copied to clipboard",
+        duration: 1000,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy prompt",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const pastePrompt = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setPromptText(text);
+      toast({
+        title: "Prompt pasted from clipboard",
+        duration: 1000,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to paste content",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const copyOutput = async () => {
+    try {
+      await navigator.clipboard.writeText(output);
+      toast({
+        title: "Output copied to clipboard",
+        duration: 1000,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy output",
+        variant: "destructive",
+      });
     }
   };
 
@@ -287,7 +364,14 @@ export const RunsTab = () => {
           </div>
           <div className="flex items-center space-x-2">
             <label className="text-sm font-medium text-gray-700">tags</label>
-            <Star className="w-4 h-4 text-gray-400" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleStar}
+              className={`p-1 ${isStarred ? 'text-yellow-500' : 'text-gray-400'}`}
+            >
+              <Star className={`w-4 h-4 ${isStarred ? 'fill-current' : ''}`} />
+            </Button>
           </div>
         </div>
         
@@ -335,8 +419,12 @@ export const RunsTab = () => {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-medium text-gray-900">Prompt</h3>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">Copy</Button>
-              <Button variant="outline" size="sm">Paste</Button>
+              <Button variant="outline" size="sm" onClick={copyPrompt}>
+                <Copy className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={pastePrompt}>
+                <Clipboard className="w-4 h-4" />
+              </Button>
             </div>
           </div>
           <Textarea
@@ -351,7 +439,9 @@ export const RunsTab = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-medium text-gray-900">Output</h3>
-            <Button variant="outline" size="sm">Copy</Button>
+            <Button variant="outline" size="sm" onClick={copyOutput}>
+              <Copy className="w-4 h-4" />
+            </Button>
           </div>
           <div className="min-h-[400px] p-3 bg-gray-50 rounded-md border font-mono text-sm whitespace-pre-wrap">
             {output}

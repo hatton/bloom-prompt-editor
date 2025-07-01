@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, ClipboardPaste } from "lucide-react";
+import { Plus, Trash2, Clipboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -276,8 +275,7 @@ export const InputBooksTab = () => {
                   size="sm"
                   onClick={handlePaste}
                 >
-                  <ClipboardPaste className="w-4 h-4 mr-1" />
-                  Paste
+                  <Clipboard className="w-4 h-4" />
                 </Button>
               </div>
             </div>
