@@ -20,13 +20,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
-import { github } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
 import { runPrompt, getModels } from "@/integrations/openrouter/client";
-
-// Register markdown language
-SyntaxHighlighter.registerLanguage("markdown", markdown);
+import { MarkdownViewer } from "@/components/MarkdownViewer";
 
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
@@ -462,19 +457,6 @@ export const RunsTab = () => {
             </Button>
           </div>
         </div>
-
-        {/* <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleStar}
-              className={`p-1 ${
-                isStarred ? "text-yellow-500" : "text-gray-400"
-              }`}
-            >
-              <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
-            </Button>
-          </div> */}
       </div>
 
       {/* Main Content Area */}
@@ -490,7 +472,6 @@ export const RunsTab = () => {
                 </Button>
                 <Button onClick={pastePrompt} variant="outline" size="sm">
                   <Clipboard className="h-4 w-4 mr-2" />
-                  Paste
                 </Button>
               </div>
             </div>
@@ -529,9 +510,12 @@ export const RunsTab = () => {
               </Button>
             </div>
             <div className="flex-1 rounded-md border overflow-auto">
-              <SyntaxHighlighter
-                language="markdown"
-                style={github}
+              <MarkdownViewer
+                content={
+                  bookInputs.find(
+                    (input) => input.id.toString() === selectedInputId
+                  )?.ocr_markdown || ""
+                }
                 customStyle={{
                   margin: 0,
                   padding: "12px",
@@ -544,11 +528,7 @@ export const RunsTab = () => {
                 }}
                 wrapLines={true}
                 wrapLongLines={true}
-              >
-                {bookInputs.find(
-                  (input) => input.id.toString() === selectedInputId
-                )?.ocr_markdown || ""}
-              </SyntaxHighlighter>
+              />
             </div>
           </Card>
 
@@ -571,18 +551,11 @@ export const RunsTab = () => {
                 </Select>
                 <Button onClick={copyOutput} variant="outline" size="sm">
                   <Copy className="h-4 w-4 mr-2" />
-                  Copy Output
                 </Button>
               </div>
             </div>
             <Card className="flex-1 w-full min-h-0">
-              <SyntaxHighlighter
-                language="markdown"
-                style={github}
-                className="h-full"
-              >
-                {output}
-              </SyntaxHighlighter>
+              <MarkdownViewer content={output} className="h-full" />
             </Card>
           </Card>
         </div>
