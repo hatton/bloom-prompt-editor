@@ -18,6 +18,7 @@ import {
   Clipboard,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSettings } from "@/hooks/useSettings";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { runPrompt, getModels } from "@/integrations/openrouter/client";
@@ -38,6 +39,7 @@ interface OpenRouterModel {
 }
 
 export const RunsTab = () => {
+  const { openRouterApiKey } = useSettings();
   const [selectedInputId, setSelectedInputId] = useState<string>("");
   const [promptText, setPromptText] = useState(
     "This is the text of the prompt that the user can edit."
@@ -340,6 +342,15 @@ export const RunsTab = () => {
       return;
     }
 
+    if (!openRouterApiKey) {
+      toast({
+        title: "API Key not set",
+        description: "Please set your OpenRouter API key in the Settings tab.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsRunning(true);
     setOutput("");
 
@@ -363,7 +374,8 @@ export const RunsTab = () => {
       const result = await runPrompt(
         promptText,
         selectedInput.ocr_markdown || "",
-        selectedModel
+        selectedModel,
+        openRouterApiKey
       );
 
       // Create new run

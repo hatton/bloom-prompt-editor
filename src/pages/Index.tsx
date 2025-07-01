@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RunsTab } from "@/components/RunsTab";
 import { InputBooksTab } from "@/components/InputBooksTab";
+import { SettingsTab } from "@/components/SettingsTab";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("runs");
@@ -28,6 +29,12 @@ const Index = () => {
               >
                 Runs
               </TabsTrigger>
+              <TabsTrigger
+                value="settings"
+                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-black data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50"
+              >
+                Settings
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent
@@ -39,6 +46,10 @@ const Index = () => {
 
             <TabsContent value="runs" className="p-0 mt-0 flex-1 min-h-0">
               <RunsTab />
+            </TabsContent>
+
+            <TabsContent value="settings" className="p-0 mt-0 flex-1 min-h-0">
+              <SettingsTab />
             </TabsContent>
           </Tabs>
         </div>

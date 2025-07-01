@@ -1,7 +1,6 @@
 import OpenAI from "openai";
 import { generateText, CoreUserMessage, CoreSystemMessage } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-const apiKey = import.meta.env.VITE_OPENROUTER_KEY;
 
 interface OpenRouterModel {
   id: string;
@@ -30,7 +29,8 @@ export async function getModels(): Promise<OpenRouterModel[]> {
 export async function runPrompt(
   llmPrompt: string,
   markdown: string,
-  modelId: string
+  modelId: string,
+  apiKey: string
 ) {
   const openrouterProvider = createOpenRouter({
     apiKey: apiKey,
