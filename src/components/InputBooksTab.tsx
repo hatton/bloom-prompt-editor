@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,16 +15,12 @@ export const InputBooksTab = () => {
   const [selectedInputId, setSelectedInputId] = useState<number | null>(null);
   const [currentLabel, setCurrentLabel] = useState("");
   const [currentMarkdown, setCurrentMarkdown] = useState("");
+  const [currentReferenceMarkdown, setCurrentReferenceMarkdown] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Load book inputs from Supabase
-  useEffect(() => {
-    loadBookInputs();
-  }, []);
-
-  const loadBookInputs = async () => {
+  const loadBookInputs = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("book-input")
@@ -46,49 +42,54 @@ export const InputBooksTab = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedInputId, toast]);
+
+  // Load book inputs from Supabase
+  useEffect(() => {
+    loadBookInputs();
+  }, [loadBookInputs]);
 
   // Load selected input data
   useEffect(() => {
     if (selectedInputId) {
-      const selectedInput = bookInputs.find(input => input.id === selectedInputId);
+      const selectedInput = bookInputs.find(
+        (input) => input.id === selectedInputId
+      );
       if (selectedInput) {
         setCurrentLabel(selectedInput.label || "");
         setCurrentMarkdown(selectedInput.ocr_markdown || "");
+        setCurrentReferenceMarkdown(selectedInput.reference_markdown || "");
         setHasUnsavedChanges(false);
       }
     }
   }, [selectedInputId, bookInputs]);
 
-  // Auto-save changes
-  useEffect(() => {
-    if (hasUnsavedChanges && selectedInputId) {
-      const timer = setTimeout(() => {
-        saveCurrentInput();
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [currentLabel, currentMarkdown, hasUnsavedChanges, selectedInputId]);
-
-  const saveCurrentInput = async () => {
+  const saveCurrentInput = useCallback(async () => {
     if (selectedInputId) {
       try {
         const { error } = await supabase
           .from("book-input")
-          .update({ 
-            label: currentLabel, 
-            ocr_markdown: currentMarkdown 
+          .update({
+            label: currentLabel,
+            ocr_markdown: currentMarkdown,
+            reference_markdown: currentReferenceMarkdown,
           })
           .eq("id", selectedInputId);
 
         if (error) throw error;
 
-        setBookInputs(prev => prev.map(input => 
-          input.id === selectedInputId 
-            ? { ...input, label: currentLabel, ocr_markdown: currentMarkdown }
-            : input
-        ));
+        setBookInputs((prev) =>
+          prev.map((input) =>
+            input.id === selectedInputId
+              ? {
+                  ...input,
+                  label: currentLabel,
+                  ocr_markdown: currentMarkdown,
+                  reference_markdown: currentReferenceMarkdown,
+                }
+              : input
+          )
+        );
         setHasUnsavedChanges(false);
         toast({
           title: "Input saved",
@@ -102,7 +103,31 @@ export const InputBooksTab = () => {
         });
       }
     }
-  };
+  }, [
+    selectedInputId,
+    currentLabel,
+    currentMarkdown,
+    currentReferenceMarkdown,
+    toast,
+  ]);
+
+  // Auto-save changes
+  useEffect(() => {
+    if (hasUnsavedChanges && selectedInputId) {
+      const timer = setTimeout(() => {
+        saveCurrentInput();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [
+    currentLabel,
+    currentMarkdown,
+    currentReferenceMarkdown,
+    hasUnsavedChanges,
+    selectedInputId,
+    saveCurrentInput,
+  ]);
 
   const handleLabelChange = (value: string) => {
     setCurrentLabel(value);
@@ -114,20 +139,27 @@ export const InputBooksTab = () => {
     setHasUnsavedChanges(true);
   };
 
+  const handleReferenceMarkdownChange = (value: string) => {
+    setCurrentReferenceMarkdown(value);
+    setHasUnsavedChanges(true);
+  };
+
   const addNewInput = async () => {
     try {
       const { data, error } = await supabase
         .from("book-input")
         .insert({
           label: "New Input",
-          ocr_markdown: "# New Input\n\nStart typing your markdown content here...",
+          ocr_markdown:
+            "# New Input\n\nStart typing your markdown content here...",
+          reference_markdown: "# Reference\n\nAdd reference content here...",
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      setBookInputs(prev => [data, ...prev]);
+      setBookInputs((prev) => [data, ...prev]);
       setSelectedInputId(data.id);
       toast({
         title: "New input created",
@@ -158,13 +190,15 @@ export const InputBooksTab = () => {
 
       if (error) throw error;
 
-      setBookInputs(prev => prev.filter(input => input.id !== inputId));
-      
+      setBookInputs((prev) => prev.filter((input) => input.id !== inputId));
+
       if (selectedInputId === inputId) {
-        const remainingInputs = bookInputs.filter(input => input.id !== inputId);
+        const remainingInputs = bookInputs.filter(
+          (input) => input.id !== inputId
+        );
         setSelectedInputId(remainingInputs[0]?.id || null);
       }
-      
+
       toast({
         title: "Input deleted",
       });
@@ -193,7 +227,25 @@ export const InputBooksTab = () => {
     }
   };
 
-  const selectedInput = bookInputs.find(input => input.id === selectedInputId);
+  const handleReferencePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setCurrentReferenceMarkdown(text);
+      setHasUnsavedChanges(true);
+      toast({
+        title: "Reference content pasted",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to paste content",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const selectedInput = bookInputs.find(
+    (input) => input.id === selectedInputId
+  );
 
   if (loading) {
     return (
@@ -222,7 +274,7 @@ export const InputBooksTab = () => {
             </Button>
           </div>
         </div>
-        
+
         <div className="p-4 space-y-2 overflow-y-auto">
           {bookInputs.map((input) => (
             <Card
@@ -266,9 +318,13 @@ export const InputBooksTab = () => {
           <div className="flex flex-col h-full">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold text-gray-900">Edit Input</h2>
+                <h2 className="text-2xl font-semibold text-gray-900">
+                  Edit Input
+                </h2>
                 {hasUnsavedChanges && (
-                  <span className="text-sm text-amber-600">Unsaved changes</span>
+                  <span className="text-sm text-amber-600">
+                    Unsaved changes
+                  </span>
                 )}
               </div>
 
@@ -285,32 +341,57 @@ export const InputBooksTab = () => {
               </div>
             </div>
 
-            <div className="flex-1 p-6 flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Markdown Content
-                </label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePaste}
-                >
-                  <Clipboard className="w-4 h-4" />
-                </Button>
+            <div className="flex-1 p-6 flex flex-col gap-6">
+              {/* OCR Markdown Section */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    OCR Markdown
+                  </label>
+                  <Button variant="outline" size="sm" onClick={handlePaste}>
+                    <Clipboard className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Textarea
+                  value={currentMarkdown}
+                  onChange={(e) => handleMarkdownChange(e.target.value)}
+                  placeholder="Enter your OCR markdown content here..."
+                  className="flex-1 resize-none font-mono text-sm min-h-[200px]"
+                />
               </div>
-              <Textarea
-                value={currentMarkdown}
-                onChange={(e) => handleMarkdownChange(e.target.value)}
-                placeholder="Enter your markdown content here..."
-                className="flex-1 resize-none font-mono text-sm"
-              />
+
+              {/* Reference Markdown Section */}
+              <div className="flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Reference Markdown (i.e. the "correct" answer)
+                  </label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReferencePaste}
+                  >
+                    <Clipboard className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Textarea
+                  value={currentReferenceMarkdown}
+                  onChange={(e) =>
+                    handleReferenceMarkdownChange(e.target.value)
+                  }
+                  placeholder="Enter your reference markdown content here..."
+                  className="flex-1 resize-none font-mono text-sm min-h-[200px]"
+                />
+              </div>
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500">
               <p className="text-lg">Select an input to edit</p>
-              <p className="text-sm mt-2">Choose an input from the sidebar to start editing</p>
+              <p className="text-sm mt-2">
+                Choose an input from the sidebar to start editing
+              </p>
             </div>
           </div>
         )}
