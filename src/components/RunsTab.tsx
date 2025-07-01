@@ -56,6 +56,7 @@ export const RunsTab = () => {
   const [selectedModel, setSelectedModel] = useState<string>(
     "google/gemini-flash-1.5"
   );
+  const [comparisonMode, setComparisonMode] = useState<string>("input");
   const { toast } = useToast();
 
   const loadRun = useCallback(async (run: Run) => {
@@ -156,6 +157,11 @@ export const RunsTab = () => {
     if (savedModel) {
       setSelectedModel(savedModel);
     }
+
+    const savedComparisonMode = localStorage.getItem("comparisonMode");
+    if (savedComparisonMode) {
+      setComparisonMode(savedComparisonMode);
+    }
   }, [loadInitialData]);
 
   // Save prompt and input IDs to localStorage
@@ -176,6 +182,12 @@ export const RunsTab = () => {
       localStorage.setItem("selectedModel", selectedModel);
     }
   }, [selectedModel]);
+
+  useEffect(() => {
+    if (comparisonMode) {
+      localStorage.setItem("comparisonMode", comparisonMode);
+    }
+  }, [comparisonMode]);
 
   // // Save prompt when component unmounts or user navigates away
   // useEffect(() => {
@@ -453,6 +465,10 @@ export const RunsTab = () => {
     bookInputs.find((input) => input.id.toString() === selectedInputId)
       ?.ocr_markdown || "";
 
+  const referenceMarkdown =
+    bookInputs.find((input) => input.id.toString() === selectedInputId)
+      ?.reference_markdown || "";
+
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Main Content Area */}
@@ -559,6 +575,21 @@ export const RunsTab = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Diff:</span>
+                    <Select
+                      value={comparisonMode}
+                      onValueChange={setComparisonMode}
+                    >
+                      <SelectTrigger className="w-[110px]">
+                        <SelectValue placeholder="Comparison mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="input">Input</SelectItem>
+                        <SelectItem value="reference">Reference</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button onClick={copyOutput} variant="outline" size="sm">
                     <Copy className="h-4 w-4 mr-2" />
                   </Button>
@@ -567,7 +598,11 @@ export const RunsTab = () => {
               <Card className="flex-1 w-full min-h-0">
                 <MarkdownViewer
                   content={output}
-                  compareWithText={currentInput}
+                  compareWithText={
+                    comparisonMode === "input"
+                      ? currentInput
+                      : referenceMarkdown
+                  }
                   className="h-full"
                 />
               </Card>

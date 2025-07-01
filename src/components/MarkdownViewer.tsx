@@ -62,6 +62,7 @@ export class MarkdownDiffViewer extends PureComponent<MarkdownViewerProps> {
         splitView={false}
         hideLineNumbers={true}
         hideMarkers={true}
+        showDiffOnly={false}
         {...rest}
       />
     );
