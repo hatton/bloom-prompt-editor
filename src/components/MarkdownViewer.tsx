@@ -59,7 +59,9 @@ export class MarkdownDiffViewer extends PureComponent<MarkdownViewerProps> {
       <ReactDiffViewer
         oldValue={compareWithText}
         newValue={content}
-        splitView={true}
+        splitView={false}
+        hideLineNumbers={true}
+        hideMarkers={true}
         {...rest}
       />
     );
