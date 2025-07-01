@@ -54,6 +54,19 @@ export const RunsTab = () => {
     loadInitialData();
   }, []);
 
+  // Save prompt and input IDs to localStorage
+  useEffect(() => {
+    if (currentPromptId) {
+      localStorage.setItem("currentPromptId", currentPromptId.toString());
+    }
+  }, [currentPromptId]);
+
+  useEffect(() => {
+    if (selectedInputId) {
+      localStorage.setItem("selectedInputId", selectedInputId);
+    }
+  }, [selectedInputId]);
+
   // // Save prompt when component unmounts or user navigates away
   // useEffect(() => {
   //   const handleBeforeUnload = () => {
@@ -95,8 +108,33 @@ export const RunsTab = () => {
       if (runsError) throw runsError;
       setRuns(runsData || []);
 
+      const savedPromptId = localStorage.getItem("currentPromptId");
+      const savedInputId = localStorage.getItem("selectedInputId");
+
+      let promptLoaded = false;
+      if (savedPromptId) {
+        const { data: prompt, error } = await supabase
+          .from("prompt")
+          .select("*")
+          .eq("id", parseInt(savedPromptId, 10))
+          .single();
+
+        if (prompt && !error) {
+          setPromptText(prompt.user_prompt || "");
+          setOriginalPromptText(prompt.user_prompt || "");
+          setCurrentPromptId(prompt.id);
+          promptLoaded = true;
+        } else {
+          localStorage.removeItem("currentPromptId");
+        }
+      }
+
+      if (savedInputId) {
+        setSelectedInputId(savedInputId);
+      }
+
       // If we have runs, load the most recent one
-      if (runsData && runsData.length > 0) {
+      if (!promptLoaded && runsData && runsData.length > 0) {
         await loadRun(runsData[0]);
         setCurrentRunIndex(0);
       }
