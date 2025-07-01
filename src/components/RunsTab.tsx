@@ -33,6 +33,25 @@ export const RunsTab = () => {
     loadInitialData();
   }, []);
 
+  // Save prompt when component unmounts or user navigates away
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (hasPromptChanged()) {
+        saveNewPromptIfChanged();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Also save when component unmounts
+      if (hasPromptChanged()) {
+        saveNewPromptIfChanged();
+      }
+    };
+  }, [promptText, originalPromptText]);
+
   const loadInitialData = async () => {
     try {
       // Load book inputs
@@ -139,15 +158,6 @@ export const RunsTab = () => {
     }
   };
 
-  // Save prompt when leaving the screen
-  useEffect(() => {
-    return () => {
-      if (hasPromptChanged()) {
-        saveNewPromptIfChanged();
-      }
-    };
-  }, []);
-
   const saveNotes = async (runId: number, notesText: string) => {
     try {
       const { error } = await supabase
@@ -224,7 +234,7 @@ export const RunsTab = () => {
     setIsRunning(true);
     
     try {
-      // Save new prompt if changed
+      // Save new prompt if changed before running
       const promptId = await saveNewPromptIfChanged();
 
       // Simulate API call

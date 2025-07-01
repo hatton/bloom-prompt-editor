@@ -261,26 +261,17 @@ export const InputBooksTab = () => {
       </div>
 
       {/* Main Content - Editor */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 flex flex-col">
         {selectedInput ? (
-          <div className="space-y-4 h-full">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900">Edit Input</h2>
-              <div className="flex items-center space-x-2">
+          <div className="flex flex-col h-full">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-semibold text-gray-900">Edit Input</h2>
                 {hasUnsavedChanges && (
                   <span className="text-sm text-amber-600">Unsaved changes</span>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePaste}
-                >
-                  <Clipboard className="w-4 h-4" />
-                </Button>
               </div>
-            </div>
 
-            <div className="space-y-4 h-[calc(100%-80px)]">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Label
@@ -292,18 +283,27 @@ export const InputBooksTab = () => {
                   className="w-full"
                 />
               </div>
+            </div>
 
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="flex-1 p-6 flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Markdown Content
                 </label>
-                <Textarea
-                  value={currentMarkdown}
-                  onChange={(e) => handleMarkdownChange(e.target.value)}
-                  placeholder="Enter your markdown content here..."
-                  className="w-full h-[calc(100%-40px)] resize-none font-mono text-sm"
-                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePaste}
+                >
+                  <Clipboard className="w-4 h-4" />
+                </Button>
               </div>
+              <Textarea
+                value={currentMarkdown}
+                onChange={(e) => handleMarkdownChange(e.target.value)}
+                placeholder="Enter your markdown content here..."
+                className="flex-1 resize-none font-mono text-sm"
+              />
             </div>
           </div>
         ) : (
