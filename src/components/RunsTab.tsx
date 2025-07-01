@@ -22,6 +22,11 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { runPrompt, getModels } from "@/integrations/openrouter/client";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
@@ -452,110 +457,123 @@ export const RunsTab = () => {
     <div className="h-full flex flex-col min-h-0">
       {/* Main Content Area */}
       <div className="flex-1 p-6 pt-0 min-h-0">
-        <div className="grid grid-cols-3 gap-4 h-full">
-          {/* Prompt Section */}
-          <Card className="p-4 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-900">Prompt</h3>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={copyPrompt}>
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button onClick={pastePrompt} variant="outline" size="sm">
-                  <Clipboard className="h-4 w-4 mr-2" />
-                </Button>
-              </div>
-            </div>
-            <Textarea
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              className="flex-1 resize-none font-mono text-sm min-h-0"
-              placeholder="Enter your prompt here..."
-              onBlur={saveNewPromptIfChanged}
-            />
-          </Card>
-
-          {/* Show Input Section, using SyntaxHighlighter for markdown */}
-          <Card className="p-4 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <h3 className="text-lg font-bold text-gray-900">Input</h3>
-
-              <Select
-                value={selectedInputId}
-                onValueChange={setSelectedInputId}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Select input..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {bookInputs.map((input) => (
-                    <SelectItem key={input.id} value={input.id.toString()}>
-                      {input.label || "Untitled"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" size="sm" onClick={copyOutput}>
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="flex-1 rounded-md border overflow-auto">
-              <MarkdownViewer
-                content={currentInput}
-                customStyle={{
-                  margin: 0,
-                  padding: "12px",
-                  backgroundColor: "#f8f9fa",
-                  fontSize: "14px",
-                  fontFamily:
-                    'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-                  height: "100%",
-                  border: "none",
-                }}
-                wrapLines={true}
-                wrapLongLines={true}
-              />
-            </div>
-          </Card>
-
-          {/* Output Section */}
-          <Card className="p-4 flex flex-col min-h-0">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold">Output</h2>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center space-x-2">
-                  <Button onClick={handleRun} disabled={isRunning}>
-                    <Play className="h-4 w-4 mr-2" />
-                    {isRunning ? "Running..." : "Run"}
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="h-full"
+          autoSaveId="runs-tab-layout"
+        >
+          <ResizablePanel defaultSize={33}>
+            {/* Prompt Section */}
+            <Card className="p-4 flex flex-col h-full min-h-0">
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                <h3 className="text-lg font-bold text-gray-900">Prompt</h3>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={copyPrompt}>
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button onClick={pastePrompt} variant="outline" size="sm">
+                    <Clipboard className="h-4 w-4 mr-2" />
                   </Button>
                 </div>
-                <Select value={selectedModel} onValueChange={setSelectedModel}>
-                  <SelectTrigger className="w-[280px]">
-                    <SelectValue placeholder="Select a model" />
+              </div>
+              <Textarea
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+                className="flex-1 resize-none font-mono text-sm min-h-0"
+                placeholder="Enter your prompt here..."
+                onBlur={saveNewPromptIfChanged}
+              />
+            </Card>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={33}>
+            {/* Show Input Section, using SyntaxHighlighter for markdown */}
+            <Card className="p-4 flex flex-col h-full min-h-0">
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                <h3 className="text-lg font-bold text-gray-900">Input</h3>
+
+                <Select
+                  value={selectedInputId}
+                  onValueChange={setSelectedInputId}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Select input..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {models.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
-                        {model.name}
+                    {bookInputs.map((input) => (
+                      <SelectItem key={input.id} value={input.id.toString()}>
+                        {input.label || "Untitled"}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Button onClick={copyOutput} variant="outline" size="sm">
-                  <Copy className="h-4 w-4 mr-2" />
+
+                <Button variant="outline" size="sm" onClick={copyOutput}>
+                  <Copy className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
-            <Card className="flex-1 w-full min-h-0">
-              <MarkdownViewer
-                content={output}
-                compareWithText={currentInput}
-                className="h-full"
-              />
+              <div className="flex-1 rounded-md border overflow-auto">
+                <MarkdownViewer
+                  content={currentInput}
+                  customStyle={{
+                    margin: 0,
+                    padding: "12px",
+                    backgroundColor: "#f8f9fa",
+                    fontSize: "14px",
+                    fontFamily:
+                      'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                    height: "100%",
+                    border: "none",
+                  }}
+                  wrapLines={true}
+                  wrapLongLines={true}
+                />
+              </div>
             </Card>
-          </Card>
-        </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={34}>
+            {/* Output Section */}
+            <Card className="p-4 flex flex-col h-full min-h-0">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold">Output</h2>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Button onClick={handleRun} disabled={isRunning}>
+                      <Play className="h-4 w-4 mr-2" />
+                      {isRunning ? "Running..." : "Run"}
+                    </Button>
+                  </div>
+                  <Select
+                    value={selectedModel}
+                    onValueChange={setSelectedModel}
+                  >
+                    <SelectTrigger className="w-[280px]">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {models.map((model) => (
+                        <SelectItem key={model.id} value={model.id}>
+                          {model.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={copyOutput} variant="outline" size="sm">
+                    <Copy className="h-4 w-4 mr-2" />
+                  </Button>
+                </div>
+              </div>
+              <Card className="flex-1 w-full min-h-0">
+                <MarkdownViewer
+                  content={output}
+                  compareWithText={currentInput}
+                  className="h-full"
+                />
+              </Card>
+            </Card>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );
