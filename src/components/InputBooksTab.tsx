@@ -1,0 +1,254 @@
+
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Plus, Trash2, ClipboardPaste } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface BookInput {
+  id: number;
+  label: string;
+  ocr_markdown: string;
+  created_at: string;
+}
+
+export const InputBooksTab = () => {
+  const [bookInputs, setBookInputs] = useState<BookInput[]>([
+    {
+      id: 1,
+      label: "Simple",
+      ocr_markdown: "# Sample Markdown\n\nThis is a sample markdown content that can be edited.",
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      label: "Complex Analysis",
+      ocr_markdown: "# Complex Analysis Document\n\n## Introduction\n\nThis document contains complex analysis data...",
+      created_at: new Date().toISOString(),
+    },
+  ]);
+  const [selectedInputId, setSelectedInputId] = useState<number | null>(1);
+  const [currentLabel, setCurrentLabel] = useState("");
+  const [currentMarkdown, setCurrentMarkdown] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const { toast } = useToast();
+
+  // Load selected input data
+  useEffect(() => {
+    if (selectedInputId) {
+      const selectedInput = bookInputs.find(input => input.id === selectedInputId);
+      if (selectedInput) {
+        setCurrentLabel(selectedInput.label);
+        setCurrentMarkdown(selectedInput.ocr_markdown);
+        setHasUnsavedChanges(false);
+      }
+    }
+  }, [selectedInputId, bookInputs]);
+
+  // Auto-save changes
+  useEffect(() => {
+    if (hasUnsavedChanges && selectedInputId) {
+      const timer = setTimeout(() => {
+        saveCurrentInput();
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentLabel, currentMarkdown, hasUnsavedChanges, selectedInputId]);
+
+  const saveCurrentInput = () => {
+    if (selectedInputId) {
+      setBookInputs(prev => prev.map(input => 
+        input.id === selectedInputId 
+          ? { ...input, label: currentLabel, ocr_markdown: currentMarkdown }
+          : input
+      ));
+      setHasUnsavedChanges(false);
+      toast({
+        title: "Input saved",
+        duration: 1000,
+      });
+    }
+  };
+
+  const handleLabelChange = (value: string) => {
+    setCurrentLabel(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleMarkdownChange = (value: string) => {
+    setCurrentMarkdown(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const addNewInput = () => {
+    const newId = Math.max(...bookInputs.map(i => i.id)) + 1;
+    const newInput: BookInput = {
+      id: newId,
+      label: `New Input ${newId}`,
+      ocr_markdown: "# New Input\n\nStart typing your markdown content here...",
+      created_at: new Date().toISOString(),
+    };
+    
+    setBookInputs(prev => [...prev, newInput]);
+    setSelectedInputId(newId);
+    toast({
+      title: "New input created",
+    });
+  };
+
+  const deleteInput = (inputId: number) => {
+    if (bookInputs.length <= 1) {
+      toast({
+        title: "Cannot delete the last input",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBookInputs(prev => prev.filter(input => input.id !== inputId));
+    
+    if (selectedInputId === inputId) {
+      const remainingInputs = bookInputs.filter(input => input.id !== inputId);
+      setSelectedInputId(remainingInputs[0]?.id || null);
+    }
+    
+    toast({
+      title: "Input deleted",
+    });
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setCurrentMarkdown(text);
+      setHasUnsavedChanges(true);
+      toast({
+        title: "Content pasted",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to paste content",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const selectedInput = bookInputs.find(input => input.id === selectedInputId);
+
+  return (
+    <div className="flex h-[calc(100vh-200px)]">
+      {/* Sidebar - Input List */}
+      <div className="w-80 border-r border-gray-200 bg-gray-50">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-medium text-gray-900">Input Books</h3>
+            <Button
+              onClick={addNewInput}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add
+            </Button>
+          </div>
+        </div>
+        
+        <div className="p-4 space-y-2 overflow-y-auto">
+          {bookInputs.map((input) => (
+            <Card
+              key={input.id}
+              className={`p-3 cursor-pointer transition-all ${
+                selectedInputId === input.id
+                  ? "bg-blue-50 border-blue-200 shadow-sm"
+                  : "hover:bg-gray-50"
+              }`}
+              onClick={() => setSelectedInputId(input.id)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                    {input.label}
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {new Date(input.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteInput(input.id);
+                  }}
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content - Editor */}
+      <div className="flex-1 p-6">
+        {selectedInput ? (
+          <div className="space-y-4 h-full">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-gray-900">Edit Input</h2>
+              <div className="flex items-center space-x-2">
+                {hasUnsavedChanges && (
+                  <span className="text-sm text-amber-600">Unsaved changes</span>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePaste}
+                >
+                  <ClipboardPaste className="w-4 h-4 mr-1" />
+                  Paste
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4 h-[calc(100%-80px)]">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Label
+                </label>
+                <Input
+                  value={currentLabel}
+                  onChange={(e) => handleLabelChange(e.target.value)}
+                  placeholder="Enter input label..."
+                  className="w-full"
+                />
+              </div>
+
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Markdown Content
+                </label>
+                <Textarea
+                  value={currentMarkdown}
+                  onChange={(e) => handleMarkdownChange(e.target.value)}
+                  placeholder="Enter your markdown content here..."
+                  className="w-full h-[calc(100%-40px)] resize-none font-mono text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-gray-500">
+              <p className="text-lg">Select an input to edit</p>
+              <p className="text-sm mt-2">Choose an input from the sidebar to start editing</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
