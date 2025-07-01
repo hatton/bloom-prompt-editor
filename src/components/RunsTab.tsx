@@ -1,18 +1,31 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Star, Play, Copy, Clipboard } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Star,
+  Play,
+  Copy,
+  Clipboard,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import markdown from 'react-syntax-highlighter/dist/esm/languages/hljs/markdown';
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import { github } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
 
 // Register markdown language
-SyntaxHighlighter.registerLanguage('markdown', markdown);
+SyntaxHighlighter.registerLanguage("markdown", markdown);
 
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
@@ -20,9 +33,11 @@ type Run = Tables<"run">;
 
 export const RunsTab = () => {
   const [selectedInputId, setSelectedInputId] = useState<string>("");
-  const [promptText, setPromptText] = useState("This is the text of the prompt that the user can edit.");
+  const [promptText, setPromptText] = useState(
+    "This is the text of the prompt that the user can edit."
+  );
   const [notes, setNotes] = useState("");
-  const [output, setOutput] = useState("This is the output from the LLM. The user cannot edit it. It will be in markdown and so syntax highlighting would be good, but previewing the markdown is not desired.");
+  const [output, setOutput] = useState("");
   const [currentRunIndex, setCurrentRunIndex] = useState(0);
   const [runs, setRuns] = useState<Run[]>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -38,24 +53,26 @@ export const RunsTab = () => {
     loadInitialData();
   }, []);
 
-  // Save prompt when component unmounts or user navigates away
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (hasPromptChanged()) {
-        saveNewPromptIfChanged();
-      }
-    };
+  // // Save prompt when component unmounts or user navigates away
+  // useEffect(() => {
+  //   const handleBeforeUnload = () => {
+  //     if (hasPromptChanged()) {
+  //       saveNewPromptIfChanged();
+  //     }
+  //   };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Also save when component unmounts
-      if (hasPromptChanged()) {
-        saveNewPromptIfChanged();
-      }
-    };
-  }, [promptText, originalPromptText]);
+  //   window.addEventListener("beforeunload", handleBeforeUnload);
+
+  //   return () => {
+  //     window.removeEventListener("beforeunload", handleBeforeUnload);
+
+  //     // NO: This was actually running with each keystroke
+  //     // Also save when component unmounts
+  //     // if (hasPromptChanged()) {
+  //     //   saveNewPromptIfChanged();
+  //     // }
+  //   };
+  // }, []);
 
   const loadInitialData = async () => {
     try {
@@ -132,30 +149,32 @@ export const RunsTab = () => {
         .from("prompt")
         .insert({
           user_prompt: promptText,
-          label: "Generated Prompt"
+          label: "Generated Prompt",
         })
         .select()
         .single();
 
       if (error) throw error;
-      
+
       setCurrentPromptId(newPrompt.id);
       setOriginalPromptText(promptText);
-      
+
       // Update the current run to point to the new prompt
       if (runs[currentRunIndex]) {
         await supabase
           .from("run")
           .update({ prompt_id: newPrompt.id })
           .eq("id", runs[currentRunIndex].id);
-        
-        setRuns(prev => prev.map((run, index) => 
-          index === currentRunIndex 
-            ? { ...run, prompt_id: newPrompt.id }
-            : run
-        ));
+
+        setRuns((prev) =>
+          prev.map((run, index) =>
+            index === currentRunIndex
+              ? { ...run, prompt_id: newPrompt.id }
+              : run
+          )
+        );
       }
-      
+
       return newPrompt.id;
     } catch (error) {
       console.error("Error saving new prompt:", error);
@@ -191,12 +210,12 @@ export const RunsTab = () => {
     const currentRun = runs[currentRunIndex];
     const currentTags = currentRun.human_tags || [];
     const newIsStarred = !isStarred;
-    
+
     let newTags;
     if (newIsStarred) {
-      newTags = [...currentTags.filter(tag => tag !== "star"), "star"];
+      newTags = [...currentTags.filter((tag) => tag !== "star"), "star"];
     } else {
-      newTags = currentTags.filter(tag => tag !== "star");
+      newTags = currentTags.filter((tag) => tag !== "star");
     }
 
     try {
@@ -208,11 +227,11 @@ export const RunsTab = () => {
       if (error) throw error;
 
       setIsStarred(newIsStarred);
-      setRuns(prev => prev.map((run, index) => 
-        index === currentRunIndex 
-          ? { ...run, human_tags: newTags }
-          : run
-      ));
+      setRuns((prev) =>
+        prev.map((run, index) =>
+          index === currentRunIndex ? { ...run, human_tags: newTags } : run
+        )
+      );
 
       toast({
         title: newIsStarred ? "Run starred" : "Run unstarred",
@@ -237,17 +256,21 @@ export const RunsTab = () => {
     }
 
     setIsRunning(true);
-    
+
     try {
       // Save new prompt if changed before running
       const promptId = await saveNewPromptIfChanged();
 
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const selectedInput = bookInputs.find(input => input.id.toString() === selectedInputId);
-      const pretendOutput = `pretend output: ${selectedInput?.ocr_markdown || "No input selected"}`;
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const selectedInput = bookInputs.find(
+        (input) => input.id.toString() === selectedInputId
+      );
+      const pretendOutput = `pretend output: ${
+        selectedInput?.ocr_markdown || "No input selected"
+      }`;
+
       // Create new run
       const { data: newRun, error: runError } = await supabase
         .from("run")
@@ -255,7 +278,7 @@ export const RunsTab = () => {
           prompt_id: promptId,
           book_input_id: parseInt(selectedInputId),
           output: pretendOutput,
-          notes: notes
+          notes: notes,
         })
         .select()
         .single();
@@ -263,10 +286,10 @@ export const RunsTab = () => {
       if (runError) throw runError;
 
       // Update local state
-      setRuns(prev => [newRun, ...prev]);
+      setRuns((prev) => [newRun, ...prev]);
       setCurrentRunIndex(0);
       setOutput(pretendOutput);
-      
+
       toast({
         title: "Run completed successfully",
       });
@@ -287,10 +310,9 @@ export const RunsTab = () => {
       await saveNewPromptIfChanged();
     }
 
-    const newIndex = direction === "previous" 
-      ? currentRunIndex - 1 
-      : currentRunIndex + 1;
-    
+    const newIndex =
+      direction === "previous" ? currentRunIndex - 1 : currentRunIndex + 1;
+
     if (newIndex >= 0 && newIndex < runs.length) {
       setCurrentRunIndex(newIndex);
       await loadRun(runs[newIndex]);
@@ -383,13 +405,15 @@ export const RunsTab = () => {
               variant="ghost"
               size="sm"
               onClick={toggleStar}
-              className={`p-1 ${isStarred ? 'text-yellow-500' : 'text-gray-400'}`}
+              className={`p-1 ${
+                isStarred ? "text-yellow-500" : "text-gray-400"
+              }`}
             >
-              <Star className={`w-4 h-4 ${isStarred ? 'fill-current' : ''}`} />
+              <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
             </Button>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Button
@@ -447,6 +471,7 @@ export const RunsTab = () => {
             onChange={(e) => setPromptText(e.target.value)}
             className="min-h-[400px] resize-none font-mono text-sm"
             placeholder="Enter your prompt here..."
+            onBlur={saveNewPromptIfChanged}
           />
         </Card>
 
@@ -464,12 +489,13 @@ export const RunsTab = () => {
               style={github}
               customStyle={{
                 margin: 0,
-                padding: '12px',
-                backgroundColor: '#f8f9fa',
-                fontSize: '14px',
-                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-                minHeight: '400px',
-                border: 'none',
+                padding: "12px",
+                backgroundColor: "#f8f9fa",
+                fontSize: "14px",
+                fontFamily:
+                  'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                minHeight: "400px",
+                border: "none",
               }}
               wrapLines={true}
               wrapLongLines={true}
