@@ -23,6 +23,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { github } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
+import { runPrompt } from "@/integrations/openrouter/client";
 
 // Register markdown language
 SyntaxHighlighter.registerLanguage("markdown", markdown);
@@ -256,20 +257,29 @@ export const RunsTab = () => {
     }
 
     setIsRunning(true);
+    setOutput("");
 
     try {
       // Save new prompt if changed before running
       const promptId = await saveNewPromptIfChanged();
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
       const selectedInput = bookInputs.find(
         (input) => input.id.toString() === selectedInputId
       );
-      const pretendOutput = `pretend output: ${
-        selectedInput?.ocr_markdown || "No input selected"
-      }`;
+
+      if (!selectedInput) {
+        toast({
+          title: "Selected input not found",
+          variant: "destructive",
+        });
+        setIsRunning(false);
+        return;
+      }
+
+      const result = await runPrompt(
+        promptText,
+        selectedInput.ocr_markdown || ""
+      );
 
       // Create new run
       const { data: newRun, error: runError } = await supabase
@@ -277,7 +287,7 @@ export const RunsTab = () => {
         .insert({
           prompt_id: promptId,
           book_input_id: parseInt(selectedInputId),
-          output: pretendOutput,
+          output: result,
           notes: notes,
         })
         .select()
@@ -288,7 +298,7 @@ export const RunsTab = () => {
       // Update local state
       setRuns((prev) => [newRun, ...prev]);
       setCurrentRunIndex(0);
-      setOutput(pretendOutput);
+      setOutput(result);
 
       toast({
         title: "Run completed successfully",
@@ -536,29 +546,24 @@ export const RunsTab = () => {
                   )}
                 </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={copyOutput}>
+              <Button variant="ghost" size="icon" onClick={copyOutput}>
                 <Copy className="w-4 h-4" />
               </Button>
             </div>
-            <div className="flex-1 rounded-md border overflow-auto">
-              <SyntaxHighlighter
-                language="markdown"
-                style={github}
-                customStyle={{
-                  margin: 0,
-                  padding: "12px",
-                  backgroundColor: "#f8f9fa",
-                  fontSize: "14px",
-                  fontFamily:
-                    'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-                  height: "100%",
-                  border: "none",
-                }}
-                wrapLines={true}
-                wrapLongLines={true}
-              >
-                {output}
-              </SyntaxHighlighter>
+            <div className="flex-1 overflow-y-auto">
+              {isRunning ? (
+                <div className="flex items-center justify-center h-full">
+                  <p>Running...</p>
+                </div>
+              ) : (
+                <SyntaxHighlighter
+                  language="markdown"
+                  style={github}
+                  className="h-full"
+                >
+                  {output}
+                </SyntaxHighlighter>
+              )}
             </div>
           </Card>
         </div>
