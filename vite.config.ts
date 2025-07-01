@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   define: {
     "import.meta.env.VITE_OPENROUTER_KEY": JSON.stringify(
-      process.env.OPENROUTER_KEYx
+      process.env.OPENROUTER_KEY
     ),
   },
   server: {

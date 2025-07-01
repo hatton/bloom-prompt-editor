@@ -1,33 +1,34 @@
 import OpenAI from "openai";
-
+import { generateText, CoreUserMessage, CoreSystemMessage } from "ai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 const apiKey = import.meta.env.VITE_OPENROUTER_KEY;
 
-const openrouter = apiKey
-  ? new OpenAI({
-      baseURL: "https://openrouter.ai/api/v1",
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: true, // This is required for browser usage.
-      defaultHeaders: {
-        "HTTP-Referer": "http://localhost:5173", // Optional, for development.
-        "X-Title": "Bloom Prompt Editor", // Optional.
-      },
-    })
-  : null;
-
-export async function runPrompt(systemPrompt: string, userPrompt: string) {
-  if (!openrouter) {
-    return "The `VITE_OPENROUTER_KEY` environment variable is missing. Please add it to your environment variables restart the development server. You can get a key from [OpenRouter](https://openrouter.ai/).";
-  }
-  const completion = await openrouter.chat.completions.create({
-    model: "google/gemini-pro-1.5",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
+export async function runPrompt(llmPrompt: string, markdown: string) {
+  const openrouterProvider = createOpenRouter({
+    apiKey: apiKey,
   });
-  const content = completion.choices[0].message.content;
-  if (content === null) {
-    return "";
-  }
-  return content;
+
+  // let's set the maxTokens to at least the length of the markdown content
+  // because we're typically working on minority languages so can expect poor tokenization.
+  const maxTokens = markdown.length + 2000; // Adding a buffer of 2000 tokens for metadata and new tagging
+  const messages: Array<CoreUserMessage | CoreSystemMessage> = [
+    {
+      role: "system",
+      content: llmPrompt,
+    },
+  ];
+
+  messages.push({
+    role: "user",
+    content: `Here is the Markdown content:\n\n${markdown}`,
+  });
+  // Call the AI model to enrich the markdown
+  const result = await generateText({
+    model: openrouterProvider("google/gemini-flash-1.5"),
+    messages,
+    temperature: 0.0, // Deterministic, no creativity needed
+    maxTokens,
+    toolChoice: "none" /* no thinking. "auto" might allow thinking */,
+  });
+  return result.text;
 }
