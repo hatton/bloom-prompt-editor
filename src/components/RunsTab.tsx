@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +7,12 @@ import { ArrowLeft, ArrowRight, Star, Play, Copy, Clipboard } from "lucide-react
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import markdown from 'react-syntax-highlighter/dist/esm/languages/hljs/markdown';
+
+// Register markdown language
+SyntaxHighlighter.registerLanguage('markdown', markdown);
 
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
@@ -453,8 +458,24 @@ export const RunsTab = () => {
               <Copy className="w-4 h-4" />
             </Button>
           </div>
-          <div className="min-h-[400px] p-3 bg-gray-50 rounded-md border font-mono text-sm whitespace-pre-wrap">
-            {output}
+          <div className="min-h-[400px] rounded-md border overflow-auto">
+            <SyntaxHighlighter
+              language="markdown"
+              style={github}
+              customStyle={{
+                margin: 0,
+                padding: '12px',
+                backgroundColor: '#f8f9fa',
+                fontSize: '14px',
+                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                minHeight: '400px',
+                border: 'none',
+              }}
+              wrapLines={true}
+              wrapLongLines={true}
+            >
+              {output}
+            </SyntaxHighlighter>
           </div>
         </Card>
       </div>
