@@ -444,28 +444,19 @@ export const RunsTab = () => {
     );
   }
 
+  const currentInput =
+    bookInputs.find((input) => input.id.toString() === selectedInputId)
+      ?.ocr_markdown || "";
+
   return (
     <div className="h-full flex flex-col min-h-0">
-      <div className="p-6 pb-0 flex-shrink-0">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Prompt</h2>
-
-          <div className="flex items-center space-x-2">
-            <Button onClick={handleRun} disabled={isRunning}>
-              <Play className="h-4 w-4 mr-2" />
-              {isRunning ? "Running..." : "Run"}
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content Area */}
       <div className="flex-1 p-6 pt-0 min-h-0">
         <div className="grid grid-cols-3 gap-4 h-full">
           {/* Prompt Section */}
           <Card className="p-4 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <h3 className="text-lg font-medium text-gray-900">Prompt</h3>
+              <h3 className="text-lg font-bold text-gray-900">Prompt</h3>
               <div className="flex space-x-2">
                 <Button variant="outline" size="sm" onClick={copyPrompt}>
                   <Copy className="w-4 h-4" />
@@ -487,7 +478,7 @@ export const RunsTab = () => {
           {/* Show Input Section, using SyntaxHighlighter for markdown */}
           <Card className="p-4 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <h3 className="text-lg font-medium text-gray-900">Input</h3>
+              <h3 className="text-lg font-bold text-gray-900">Input</h3>
 
               <Select
                 value={selectedInputId}
@@ -511,11 +502,7 @@ export const RunsTab = () => {
             </div>
             <div className="flex-1 rounded-md border overflow-auto">
               <MarkdownViewer
-                content={
-                  bookInputs.find(
-                    (input) => input.id.toString() === selectedInputId
-                  )?.ocr_markdown || ""
-                }
+                content={currentInput}
                 customStyle={{
                   margin: 0,
                   padding: "12px",
@@ -535,8 +522,14 @@ export const RunsTab = () => {
           {/* Output Section */}
           <Card className="p-4 flex flex-col min-h-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Output</h2>
+              <h2 className="text-lg font-bold">Output</h2>
               <div className="flex items-center gap-2">
+                <div className="flex items-center space-x-2">
+                  <Button onClick={handleRun} disabled={isRunning}>
+                    <Play className="h-4 w-4 mr-2" />
+                    {isRunning ? "Running..." : "Run"}
+                  </Button>
+                </div>
                 <Select value={selectedModel} onValueChange={setSelectedModel}>
                   <SelectTrigger className="w-[280px]">
                     <SelectValue placeholder="Select a model" />
@@ -555,7 +548,11 @@ export const RunsTab = () => {
               </div>
             </div>
             <Card className="flex-1 w-full min-h-0">
-              <MarkdownViewer content={output} className="h-full" />
+              <MarkdownViewer
+                content={output}
+                compareWithText={currentInput}
+                className="h-full"
+              />
             </Card>
           </Card>
         </div>
