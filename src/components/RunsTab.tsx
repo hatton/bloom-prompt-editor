@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,7 +23,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { github } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
-import { runPrompt } from "@/integrations/openrouter/client";
+import { runPrompt, getModels } from "@/integrations/openrouter/client";
 
 // Register markdown language
 SyntaxHighlighter.registerLanguage("markdown", markdown);
@@ -31,6 +31,11 @@ SyntaxHighlighter.registerLanguage("markdown", markdown);
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
 type Run = Tables<"run">;
+
+interface OpenRouterModel {
+  id: string;
+  name: string;
+}
 
 export const RunsTab = () => {
   const [selectedInputId, setSelectedInputId] = useState<string>("");
@@ -47,48 +52,40 @@ export const RunsTab = () => {
   const [originalPromptText, setOriginalPromptText] = useState("");
   const [isStarred, setIsStarred] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [models, setModels] = useState<OpenRouterModel[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>(
+    "google/gemini-flash-1.5"
+  );
   const { toast } = useToast();
 
-  // Load data on component mount
-  useEffect(() => {
-    loadInitialData();
+  const loadRun = useCallback(async (run: Run) => {
+    try {
+      setNotes(run.notes || "");
+      setOutput(run.output || "");
+      setSelectedInputId(run.book_input_id?.toString() || "");
+      setIsStarred(run.human_tags?.includes("star") || false);
+
+      // Load the prompt for this run
+      if (run.prompt_id) {
+        const { data: prompt, error } = await supabase
+          .from("prompt")
+          .select("*")
+          .eq("id", run.prompt_id)
+          .single();
+
+        if (error) throw error;
+        if (prompt) {
+          setPromptText(prompt.user_prompt || "");
+          setOriginalPromptText(prompt.user_prompt || "");
+          setCurrentPromptId(prompt.id);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading run:", error);
+    }
   }, []);
 
-  // Save prompt and input IDs to localStorage
-  useEffect(() => {
-    if (currentPromptId) {
-      localStorage.setItem("currentPromptId", currentPromptId.toString());
-    }
-  }, [currentPromptId]);
-
-  useEffect(() => {
-    if (selectedInputId) {
-      localStorage.setItem("selectedInputId", selectedInputId);
-    }
-  }, [selectedInputId]);
-
-  // // Save prompt when component unmounts or user navigates away
-  // useEffect(() => {
-  //   const handleBeforeUnload = () => {
-  //     if (hasPromptChanged()) {
-  //       saveNewPromptIfChanged();
-  //     }
-  //   };
-
-  //   window.addEventListener("beforeunload", handleBeforeUnload);
-
-  //   return () => {
-  //     window.removeEventListener("beforeunload", handleBeforeUnload);
-
-  //     // NO: This was actually running with each keystroke
-  //     // Also save when component unmounts
-  //     // if (hasPromptChanged()) {
-  //     //   saveNewPromptIfChanged();
-  //     // }
-  //   };
-  // }, []);
-
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       // Load book inputs
       const { data: inputs, error: inputsError } = await supabase
@@ -147,34 +144,59 @@ export const RunsTab = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadRun, toast]);
 
-  const loadRun = async (run: Run) => {
-    try {
-      setNotes(run.notes || "");
-      setOutput(run.output || "");
-      setSelectedInputId(run.book_input_id?.toString() || "");
-      setIsStarred(run.human_tags?.includes("star") || false);
+  // Load data on component mount
+  useEffect(() => {
+    loadInitialData();
+    // Fetch models in the background
+    getModels().then(setModels);
 
-      // Load the prompt for this run
-      if (run.prompt_id) {
-        const { data: prompt, error } = await supabase
-          .from("prompt")
-          .select("*")
-          .eq("id", run.prompt_id)
-          .single();
-
-        if (error) throw error;
-        if (prompt) {
-          setPromptText(prompt.user_prompt || "");
-          setOriginalPromptText(prompt.user_prompt || "");
-          setCurrentPromptId(prompt.id);
-        }
-      }
-    } catch (error) {
-      console.error("Error loading run:", error);
+    const savedModel = localStorage.getItem("selectedModel");
+    if (savedModel) {
+      setSelectedModel(savedModel);
     }
-  };
+  }, [loadInitialData]);
+
+  // Save prompt and input IDs to localStorage
+  useEffect(() => {
+    if (currentPromptId) {
+      localStorage.setItem("currentPromptId", currentPromptId.toString());
+    }
+  }, [currentPromptId]);
+
+  useEffect(() => {
+    if (selectedInputId) {
+      localStorage.setItem("selectedInputId", selectedInputId);
+    }
+  }, [selectedInputId]);
+
+  useEffect(() => {
+    if (selectedModel) {
+      localStorage.setItem("selectedModel", selectedModel);
+    }
+  }, [selectedModel]);
+
+  // // Save prompt when component unmounts or user navigates away
+  // useEffect(() => {
+  //   const handleBeforeUnload = () => {
+  //     if (hasPromptChanged()) {
+  //       saveNewPromptIfChanged();
+  //     }
+  //   };
+
+  //   window.addEventListener("beforeunload", handleBeforeUnload);
+
+  //   return () => {
+  //     window.removeEventListener("beforeunload", handleBeforeUnload);
+
+  //     // NO: This was actually running with each keystroke
+  //     // Also save when component unmounts
+  //     // if (hasPromptChanged()) {
+  //     //   saveNewPromptIfChanged();
+  //     // }
+  //   };
+  // }, []);
 
   const hasPromptChanged = () => {
     return promptText !== originalPromptText;
@@ -316,7 +338,8 @@ export const RunsTab = () => {
 
       const result = await runPrompt(
         promptText,
-        selectedInput.ocr_markdown || ""
+        selectedInput.ocr_markdown || "",
+        selectedModel
       );
 
       // Create new run
@@ -429,61 +452,29 @@ export const RunsTab = () => {
   return (
     <div className="h-full flex flex-col min-h-0">
       <div className="p-6 pb-0 flex-shrink-0">
-        {/* Header Controls */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-2xl font-semibold text-gray-900">Run</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Prompt</h2>
 
-            {/* <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={toggleStar}
-                className={`p-1 ${
-                  isStarred ? "text-yellow-500" : "text-gray-400"
-                }`}
-              >
-                <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
-              </Button>
-            </div> */}
+          <div className="flex items-center space-x-2">
+            <Button onClick={handleRun} disabled={isRunning}>
+              <Play className="h-4 w-4 mr-2" />
+              {isRunning ? "Running..." : "Run"}
+            </Button>
           </div>
-
-          {/* <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigateRun("previous")}
-                disabled={!canGoPrevious}
-                className="flex items-center space-x-1"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>previous run</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigateRun("next")}
-                disabled={!canGoNext}
-                className="flex items-center space-x-1"
-              >
-                <span>next run</span>
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-          </div> */}
         </div>
 
-        {/* Notes */}
-        {/* <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">notes</label>
-          <Textarea
-            value={notes}
-            onChange={(e) => handleNotesChange(e.target.value)}
-            className="min-h-16 resize-none"
-            placeholder="Add notes about this run..."
-          />
-        </div> */}
+        {/* <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleStar}
+              className={`p-1 ${
+                isStarred ? "text-yellow-500" : "text-gray-400"
+              }`}
+            >
+              <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
+            </Button>
+          </div> */}
       </div>
 
       {/* Main Content Area */}
@@ -497,8 +488,9 @@ export const RunsTab = () => {
                 <Button variant="outline" size="sm" onClick={copyPrompt}>
                   <Copy className="w-4 h-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={pastePrompt}>
-                  <Clipboard className="w-4 h-4" />
+                <Button onClick={pastePrompt} variant="outline" size="sm">
+                  <Clipboard className="h-4 w-4 mr-2" />
+                  Paste
                 </Button>
               </div>
             </div>
@@ -562,47 +554,36 @@ export const RunsTab = () => {
 
           {/* Output Section */}
           <Card className="p-4 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <h3 className="text-lg font-medium text-gray-900">Output</h3>
-              {/* Run Button */}
-              <div className="flex justify-center">
-                <Button
-                  onClick={handleRun}
-                  disabled={isRunning || !selectedInputId}
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-md font-medium"
-                >
-                  {isRunning ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Running...</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <Play className="w-4 h-4" />
-                      <span>Run</span>
-                    </div>
-                  )}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Output</h2>
+              <div className="flex items-center gap-2">
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder="Select a model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {models.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={copyOutput} variant="outline" size="sm">
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Output
                 </Button>
               </div>
-              <Button variant="ghost" size="icon" onClick={copyOutput}>
-                <Copy className="w-4 h-4" />
-              </Button>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              {isRunning ? (
-                <div className="flex items-center justify-center h-full">
-                  <p>Running...</p>
-                </div>
-              ) : (
-                <SyntaxHighlighter
-                  language="markdown"
-                  style={github}
-                  className="h-full"
-                >
-                  {output}
-                </SyntaxHighlighter>
-              )}
-            </div>
+            <Card className="flex-1 w-full min-h-0">
+              <SyntaxHighlighter
+                language="markdown"
+                style={github}
+                className="h-full"
+              >
+                {output}
+              </SyntaxHighlighter>
+            </Card>
           </Card>
         </div>
       </div>

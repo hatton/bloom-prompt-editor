@@ -3,7 +3,35 @@ import { generateText, CoreUserMessage, CoreSystemMessage } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 const apiKey = import.meta.env.VITE_OPENROUTER_KEY;
 
-export async function runPrompt(llmPrompt: string, markdown: string) {
+interface OpenRouterModel {
+  id: string;
+  name: string;
+}
+
+let cachedModels: OpenRouterModel[] = [];
+
+export async function getModels(): Promise<OpenRouterModel[]> {
+  if (cachedModels.length > 0) {
+    return cachedModels;
+  }
+
+  try {
+    const response = await fetch("https://openrouter.ai/api/v1/models");
+    const data = await response.json();
+    cachedModels = data.data; // The models are in the 'data' property
+    cachedModels.sort((a, b) => a.name.localeCompare(b.name));
+    return cachedModels;
+  } catch (error) {
+    console.error("Error fetching OpenRouter models:", error);
+    return [];
+  }
+}
+
+export async function runPrompt(
+  llmPrompt: string,
+  markdown: string,
+  modelId: string
+) {
   const openrouterProvider = createOpenRouter({
     apiKey: apiKey,
   });
@@ -24,7 +52,7 @@ export async function runPrompt(llmPrompt: string, markdown: string) {
   });
   // Call the AI model to enrich the markdown
   const result = await generateText({
-    model: openrouterProvider("google/gemini-flash-1.5"),
+    model: openrouterProvider(modelId), // todo: use the currently selected model
     messages,
     temperature: 0.0, // Deterministic, no creativity needed
     maxTokens,
