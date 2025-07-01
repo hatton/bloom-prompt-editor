@@ -370,7 +370,7 @@ export const RunsTab = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center text-gray-500">
           <p className="text-lg">Loading runs...</p>
         </div>
@@ -379,152 +379,189 @@ export const RunsTab = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-2xl font-semibold text-gray-900">Run</h2>
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Input</label>
-            <Select value={selectedInputId} onValueChange={setSelectedInputId}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select input..." />
-              </SelectTrigger>
-              <SelectContent>
-                {bookInputs.map((input) => (
-                  <SelectItem key={input.id} value={input.id.toString()}>
-                    {input.label || "Untitled"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="h-full flex flex-col min-h-0">
+      <div className="p-6 pb-0 flex-shrink-0">
+        {/* Header Controls */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            <h2 className="text-2xl font-semibold text-gray-900">Run</h2>
+
+            {/* <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleStar}
+                className={`p-1 ${
+                  isStarred ? "text-yellow-500" : "text-gray-400"
+                }`}
+              >
+                <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
+              </Button>
+            </div> */}
           </div>
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">tags</label>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleStar}
-              className={`p-1 ${
-                isStarred ? "text-yellow-500" : "text-gray-400"
-              }`}
-            >
-              <Star className={`w-4 h-4 ${isStarred ? "fill-current" : ""}`} />
-            </Button>
-          </div>
+
+          {/* <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigateRun("previous")}
+                disabled={!canGoPrevious}
+                className="flex items-center space-x-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>previous run</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigateRun("next")}
+                disabled={!canGoNext}
+                className="flex items-center space-x-1"
+              >
+                <span>next run</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div> */}
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigateRun("previous")}
-              disabled={!canGoPrevious}
-              className="flex items-center space-x-1"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>previous run</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigateRun("next")}
-              disabled={!canGoNext}
-              className="flex items-center space-x-1"
-            >
-              <span>next run</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Notes */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">notes</label>
-        <Textarea
-          value={notes}
-          onChange={(e) => handleNotesChange(e.target.value)}
-          className="min-h-16 resize-none"
-          placeholder="Add notes about this run..."
-        />
+        {/* Notes */}
+        {/* <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">notes</label>
+          <Textarea
+            value={notes}
+            onChange={(e) => handleNotesChange(e.target.value)}
+            className="min-h-16 resize-none"
+            placeholder="Add notes about this run..."
+          />
+        </div> */}
       </div>
 
       {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Prompt Section */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-gray-900">Prompt</h3>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={copyPrompt}>
+      <div className="flex-1 p-6 pt-0 min-h-0">
+        <div className="grid grid-cols-3 gap-4 h-full">
+          {/* Prompt Section */}
+          <Card className="p-4 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <h3 className="text-lg font-medium text-gray-900">Prompt</h3>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={copyPrompt}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={pastePrompt}>
+                  <Clipboard className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <Textarea
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              className="flex-1 resize-none font-mono text-sm min-h-0"
+              placeholder="Enter your prompt here..."
+              onBlur={saveNewPromptIfChanged}
+            />
+          </Card>
+
+          {/* Show Input Section, using SyntaxHighlighter for markdown */}
+          <Card className="p-4 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <h3 className="text-lg font-medium text-gray-900">Input</h3>
+
+              <Select
+                value={selectedInputId}
+                onValueChange={setSelectedInputId}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select input..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {bookInputs.map((input) => (
+                    <SelectItem key={input.id} value={input.id.toString()}>
+                      {input.label || "Untitled"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button variant="outline" size="sm" onClick={copyOutput}>
                 <Copy className="w-4 h-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={pastePrompt}>
-                <Clipboard className="w-4 h-4" />
+            </div>
+            <div className="flex-1 rounded-md border overflow-auto">
+              <SyntaxHighlighter
+                language="markdown"
+                style={github}
+                customStyle={{
+                  margin: 0,
+                  padding: "12px",
+                  backgroundColor: "#f8f9fa",
+                  fontSize: "14px",
+                  fontFamily:
+                    'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                  height: "100%",
+                  border: "none",
+                }}
+                wrapLines={true}
+                wrapLongLines={true}
+              >
+                {bookInputs.find(
+                  (input) => input.id.toString() === selectedInputId
+                )?.ocr_markdown || ""}
+              </SyntaxHighlighter>
+            </div>
+          </Card>
+
+          {/* Output Section */}
+          <Card className="p-4 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-3 flex-shrink-0">
+              <h3 className="text-lg font-medium text-gray-900">Output</h3>
+              {/* Run Button */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleRun}
+                  disabled={isRunning || !selectedInputId}
+                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-md font-medium"
+                >
+                  {isRunning ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Running...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Play className="w-4 h-4" />
+                      <span>Run</span>
+                    </div>
+                  )}
+                </Button>
+              </div>
+              <Button variant="outline" size="sm" onClick={copyOutput}>
+                <Copy className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-          <Textarea
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            className="min-h-[400px] resize-none font-mono text-sm"
-            placeholder="Enter your prompt here..."
-            onBlur={saveNewPromptIfChanged}
-          />
-        </Card>
-
-        {/* Output Section */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-gray-900">Output</h3>
-            <Button variant="outline" size="sm" onClick={copyOutput}>
-              <Copy className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="min-h-[400px] rounded-md border overflow-auto">
-            <SyntaxHighlighter
-              language="markdown"
-              style={github}
-              customStyle={{
-                margin: 0,
-                padding: "12px",
-                backgroundColor: "#f8f9fa",
-                fontSize: "14px",
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-                minHeight: "400px",
-                border: "none",
-              }}
-              wrapLines={true}
-              wrapLongLines={true}
-            >
-              {output}
-            </SyntaxHighlighter>
-          </div>
-        </Card>
-      </div>
-
-      {/* Run Button */}
-      <div className="flex justify-center">
-        <Button
-          onClick={handleRun}
-          disabled={isRunning || !selectedInputId}
-          className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-md font-medium"
-        >
-          {isRunning ? (
-            <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              <span>Running...</span>
+            <div className="flex-1 rounded-md border overflow-auto">
+              <SyntaxHighlighter
+                language="markdown"
+                style={github}
+                customStyle={{
+                  margin: 0,
+                  padding: "12px",
+                  backgroundColor: "#f8f9fa",
+                  fontSize: "14px",
+                  fontFamily:
+                    'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                  height: "100%",
+                  border: "none",
+                }}
+                wrapLines={true}
+                wrapLongLines={true}
+              >
+                {output}
+              </SyntaxHighlighter>
             </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Play className="w-4 h-4" />
-              <span>Run</span>
-            </div>
-          )}
-        </Button>
+          </Card>
+        </div>
       </div>
     </div>
   );
