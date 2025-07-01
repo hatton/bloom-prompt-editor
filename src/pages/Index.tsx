@@ -7,7 +7,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("runs");
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
+    <div className="h-screen bg-gray-500 flex flex-col">
       <div className="px-4 py-6 flex-1 flex flex-col min-h-0">
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden flex-1 flex flex-col">
           <Tabs
@@ -15,16 +15,16 @@ const Index = () => {
             onValueChange={setActiveTab}
             className="w-full h-full flex flex-col"
           >
-            <TabsList className="grid w-full grid-cols-2 bg-gray-50 p-1 rounded-none border-b flex-shrink-0">
+            <TabsList className="flex justify-start bg-gray-100 p-0 border-b border-gray-200 flex-shrink-0 w-full">
               <TabsTrigger
                 value="input-books"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500"
+                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card data-[state=active]:border-b-white data-[state=active]:text-blue-600 data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50"
               >
                 Input Books
               </TabsTrigger>
               <TabsTrigger
                 value="runs"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500"
+                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-black data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50"
               >
                 Runs
               </TabsTrigger>

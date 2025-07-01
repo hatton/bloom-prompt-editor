@@ -189,6 +189,18 @@ export const RunsTab = () => {
     }
   }, [comparisonMode]);
 
+  // Auto-switch to "input" if "reference" is selected but no reference markdown exists
+  useEffect(() => {
+    const selectedInput = bookInputs.find(
+      (input) => input.id.toString() === selectedInputId
+    );
+    const hasRefMarkdown = !!selectedInput?.reference_markdown;
+
+    if (comparisonMode === "reference" && !hasRefMarkdown) {
+      setComparisonMode("input");
+    }
+  }, [selectedInputId, bookInputs, comparisonMode]);
+
   // // Save prompt when component unmounts or user navigates away
   // useEffect(() => {
   //   const handleBeforeUnload = () => {
@@ -451,6 +463,19 @@ export const RunsTab = () => {
   const canGoPrevious = currentRunIndex > 0;
   const canGoNext = currentRunIndex < runs.length - 1;
 
+  // Check if the selected input has reference markdown
+  const selectedInput = bookInputs.find(
+    (input) => input.id.toString() === selectedInputId
+  );
+
+  // Auto-switch to "input" if "reference" is selected but no reference markdown exists
+  useEffect(() => {
+    const hasReferenceMarkdown = !!selectedInput?.reference_markdown;
+    if (comparisonMode === "reference" && !hasReferenceMarkdown) {
+      setComparisonMode("input");
+    }
+  }, [selectedInputId, selectedInput?.reference_markdown, comparisonMode]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -469,10 +494,12 @@ export const RunsTab = () => {
     bookInputs.find((input) => input.id.toString() === selectedInputId)
       ?.reference_markdown || "";
 
+  const hasReferenceMarkdown = !!referenceMarkdown;
+
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Main Content Area */}
-      <div className="flex-1 p-6 pt-0 min-h-0">
+      <div className="flex-1 pt-0 min-h-0">
         <ResizablePanelGroup
           direction="horizontal"
           className="h-full"
@@ -501,7 +528,7 @@ export const RunsTab = () => {
               />
             </Card>
           </ResizablePanel>
-          <ResizableHandle withHandle />
+          <ResizableHandle />
           <ResizablePanel defaultSize={33}>
             {/* Show Input Section, using SyntaxHighlighter for markdown */}
             <Card className="p-4 flex flex-col h-full min-h-0">
@@ -547,7 +574,7 @@ export const RunsTab = () => {
               </div>
             </Card>
           </ResizablePanel>
-          <ResizableHandle withHandle />
+          <ResizableHandle />
           <ResizablePanel defaultSize={34}>
             {/* Output Section */}
             <Card className="p-4 flex flex-col h-full min-h-0">
@@ -586,7 +613,12 @@ export const RunsTab = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="input">Input</SelectItem>
-                        <SelectItem value="reference">Reference</SelectItem>
+                        <SelectItem
+                          value="reference"
+                          disabled={!hasReferenceMarkdown}
+                        >
+                          Reference
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

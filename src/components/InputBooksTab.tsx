@@ -260,8 +260,8 @@ export const InputBooksTab = () => {
   return (
     <div className="flex h-[calc(100vh-200px)]">
       {/* Sidebar - Input List */}
-      <div className="w-80 border-r border-gray-200 bg-gray-50">
-        <div className="p-4 border-b border-gray-200">
+      <div className="w-80 bg-blue-200">
+        <div className="p-4  border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-medium text-gray-900">Input Books</h3>
             <Button
@@ -279,9 +279,9 @@ export const InputBooksTab = () => {
           {bookInputs.map((input) => (
             <Card
               key={input.id}
-              className={`p-3 cursor-pointer transition-all ${
+              className={`p-3 cursor-pointer transition-all group bg-gray-50 ${
                 selectedInputId === input.id
-                  ? "bg-blue-50 border-blue-200 shadow-sm"
+                  ? "bg-white border-blue-600 shadow-sm border-[3px]"
                   : "hover:bg-gray-50"
               }`}
               onClick={() => setSelectedInputId(input.id)}
@@ -302,7 +302,7 @@ export const InputBooksTab = () => {
                     e.stopPropagation();
                     deleteInput(input.id);
                   }}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -313,7 +313,7 @@ export const InputBooksTab = () => {
       </div>
 
       {/* Main Content - Editor */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-blue-100">
         {selectedInput ? (
           <div className="flex flex-col h-full">
             <div className="p-6 border-b border-gray-200">
@@ -336,7 +336,7 @@ export const InputBooksTab = () => {
                   value={currentLabel}
                   onChange={(e) => handleLabelChange(e.target.value)}
                   placeholder="Enter input label..."
-                  className="w-full"
+                  className="w-[20em]"
                 />
               </div>
             </div>
@@ -364,7 +364,7 @@ export const InputBooksTab = () => {
               <div className="flex-1 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    Reference Markdown (i.e. the "correct" answer)
+                    Optional Reference Markdown (i.e. the "correct" answer)
                   </label>
                   <Button
                     variant="outline"
