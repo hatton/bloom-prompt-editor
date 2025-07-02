@@ -13,6 +13,8 @@ interface MarkdownViewerProps {
   wrapLines?: boolean;
   wrapLongLines?: boolean;
   compareWithText?: string;
+  splitView?: boolean;
+  showDiffOnly?: boolean;
 }
 
 export const MarkdownViewer = ({
@@ -22,6 +24,8 @@ export const MarkdownViewer = ({
   wrapLines,
   wrapLongLines,
   compareWithText,
+  splitView = false,
+  showDiffOnly = false,
 }: MarkdownViewerProps) => {
   if (!content || content.trim() === "") {
     return "";
@@ -36,6 +40,8 @@ export const MarkdownViewer = ({
         customStyle={customStyle}
         wrapLines={wrapLines}
         wrapLongLines={wrapLongLines}
+        splitView={splitView}
+        showDiffOnly={showDiffOnly}
       />
     );
   }
@@ -54,7 +60,13 @@ export const MarkdownViewer = ({
 };
 export class MarkdownDiffViewer extends PureComponent<MarkdownViewerProps> {
   render() {
-    const { content, compareWithText, ...rest } = this.props;
+    const {
+      content,
+      compareWithText,
+      splitView = false,
+      showDiffOnly = false,
+      ...rest
+    } = this.props;
 
     if (!compareWithText || compareWithText.trim() === "") {
       return <MarkdownViewer content={content} {...rest} />;
@@ -63,10 +75,11 @@ export class MarkdownDiffViewer extends PureComponent<MarkdownViewerProps> {
       <ReactDiffViewer
         oldValue={compareWithText}
         newValue={content}
-        splitView={false}
+        splitView={splitView}
         hideLineNumbers={true}
         hideMarkers={true}
-        showDiffOnly={false}
+        showDiffOnly={showDiffOnly}
+        extraLinesSurroundingDiff={1}
         {...rest}
       />
     );
