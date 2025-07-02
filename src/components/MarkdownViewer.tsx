@@ -55,6 +55,10 @@ export const MarkdownViewer = ({
 export class MarkdownDiffViewer extends PureComponent<MarkdownViewerProps> {
   render() {
     const { content, compareWithText, ...rest } = this.props;
+
+    if (!compareWithText || compareWithText.trim() === "") {
+      return <MarkdownViewer content={content} {...rest} />;
+    }
     return (
       <ReactDiffViewer
         oldValue={compareWithText}

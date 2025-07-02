@@ -9,19 +9,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import {
-  ArrowLeft,
-  ArrowRight,
-  Star,
-  Play,
-  Copy,
-  Clipboard,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Star, Copy, Clipboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { runPrompt, getModels } from "@/integrations/openrouter/client";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
+import { OutputSection } from "@/components/OutputSection";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -587,69 +581,20 @@ export const RunsTab = () => {
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={34}>
-            {/* Output Section */}
-            <Card className="p-4 flex flex-col h-full min-h-0">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold">Output</h2>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center space-x-2">
-                    <Button onClick={handleRun} disabled={isRunning}>
-                      <Play className="h-4 w-4 mr-2" />
-                      {isRunning ? "Running..." : "Run"}
-                    </Button>
-                  </div>
-                  <Select
-                    value={selectedModel}
-                    onValueChange={setSelectedModel}
-                  >
-                    <SelectTrigger className="w-[280px]">
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {models.map((model) => (
-                        <SelectItem key={model.id} value={model.id}>
-                          {model.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Diff:</span>
-                    <Select
-                      value={comparisonMode}
-                      onValueChange={setComparisonMode}
-                    >
-                      <SelectTrigger className="w-[110px]">
-                        <SelectValue placeholder="Comparison mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="input">Input</SelectItem>
-                        <SelectItem
-                          value="reference"
-                          disabled={!hasReferenceMarkdown}
-                        >
-                          Reference
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={copyOutput} variant="outline" size="sm">
-                    <Copy className="h-4 w-4 mr-2" />
-                  </Button>
-                </div>
-              </div>
-              <Card className="flex-1 w-full min-h-0">
-                <MarkdownViewer
-                  content={output}
-                  compareWithText={
-                    comparisonMode === "input"
-                      ? currentInput
-                      : referenceMarkdown
-                  }
-                  className="h-full"
-                />
-              </Card>
-            </Card>
+            <OutputSection
+              output={output}
+              isRunning={isRunning}
+              models={models}
+              selectedModel={selectedModel}
+              comparisonMode={comparisonMode}
+              hasReferenceMarkdown={hasReferenceMarkdown}
+              currentInput={currentInput}
+              referenceMarkdown={referenceMarkdown}
+              onRun={handleRun}
+              onModelChange={setSelectedModel}
+              onComparisonModeChange={setComparisonMode}
+              onCopyOutput={copyOutput}
+            />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

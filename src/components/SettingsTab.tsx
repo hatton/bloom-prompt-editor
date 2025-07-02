@@ -28,7 +28,9 @@ export const SettingsTab = ({ ReadinessChanged }: SettingsTabProps) => {
     getCurrentUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
     });
 
