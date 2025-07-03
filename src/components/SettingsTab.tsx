@@ -4,16 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
-
-const API_KEY_STORAGE_KEY = "openRouterApiKey";
+import { useSettings } from "@/hooks/useSettings";
 
 interface SettingsTabProps {
   ReadinessChanged: (isReady: boolean) => void;
 }
 
 export const SettingsTab = ({ ReadinessChanged }: SettingsTabProps) => {
-  const [openRouterApiKey, setOpenRouterApiKey] = useState<string>("");
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { openRouterApiKey, setOpenRouterApiKey, isLoaded } = useSettings();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -38,20 +36,7 @@ export const SettingsTab = ({ ReadinessChanged }: SettingsTabProps) => {
   }, []);
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    if (storedApiKey) {
-      setOpenRouterApiKey(storedApiKey);
-    }
-    setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
     if (isLoaded) {
-      if (openRouterApiKey) {
-        localStorage.setItem(API_KEY_STORAGE_KEY, openRouterApiKey);
-      } else {
-        localStorage.removeItem(API_KEY_STORAGE_KEY);
-      }
       // Call the readiness callback whenever the API key changes
       ReadinessChanged(!!openRouterApiKey);
     }

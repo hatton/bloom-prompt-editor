@@ -1,29 +1,18 @@
 import { useState, useEffect } from "react";
+import { useLocalStorage } from "./useLocalStorage";
 
 const API_KEY_STORAGE_KEY = "openRouterApiKey";
 
 export const useSettings = () => {
-  const [openRouterApiKey, setOpenRouterApiKey] = useState<string>("");
+  const [openRouterApiKey, setOpenRouterApiKey] = useLocalStorage<string>(
+    API_KEY_STORAGE_KEY,
+    ""
+  );
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
-    if (storedApiKey) {
-      setOpenRouterApiKey(storedApiKey);
-    }
     setIsLoaded(true);
   }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      if (openRouterApiKey) {
-        localStorage.setItem(API_KEY_STORAGE_KEY, openRouterApiKey);
-      } else {
-        // If the key is cleared, remove it from storage
-        localStorage.removeItem(API_KEY_STORAGE_KEY);
-      }
-    }
-  }, [openRouterApiKey, isLoaded]);
 
   return { openRouterApiKey, setOpenRouterApiKey, isLoaded };
 };

@@ -3,21 +3,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RunsTab } from "@/components/RunsTab";
 import { InputBooksTab } from "@/components/InputBooksTab";
 import { SettingsTab } from "@/components/SettingsTab";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("runs");
   const [isReady, setIsReady] = useState(false);
+  const [apiKey] = useLocalStorage<string>("openRouterApiKey", "");
 
   // Check initial readiness state on mount
   useEffect(() => {
-    const storedApiKey = localStorage.getItem("openRouterApiKey");
-    setIsReady(!!storedApiKey);
+    setIsReady(!!apiKey);
 
     // If no API key, automatically switch to settings tab
-    if (!storedApiKey) {
+    if (!apiKey) {
       setActiveTab("settings");
     }
-  }, []);
+  }, [apiKey]);
 
   const handleReadinessChanged = useCallback((ready: boolean) => {
     setIsReady(ready);

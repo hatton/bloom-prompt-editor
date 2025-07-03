@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Star, Copy, Clipboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { runPrompt, getModels } from "@/integrations/openrouter/client";
@@ -32,7 +33,26 @@ interface OpenRouterModel {
 }
 
 export const RunsTab = () => {
-  const [selectedInputId, setSelectedInputId] = useState<string>("");
+  // Settings managed by localStorage hook
+  const [currentPromptId, setCurrentPromptId] = useLocalStorage<number | null>(
+    "currentPromptId",
+    null
+  );
+  const [selectedInputId, setSelectedInputId] = useLocalStorage<string>(
+    "selectedInputId",
+    ""
+  );
+  const [selectedModel, setSelectedModel] = useLocalStorage<string>(
+    "selectedModel",
+    "google/gemini-flash-1.5"
+  );
+  const [comparisonMode, setComparisonMode] = useLocalStorage<string>(
+    "comparisonMode",
+    "input"
+  );
+  const [openRouterApiKey] = useLocalStorage<string>("openRouterApiKey", "");
+
+  // Other state
   const [promptText, setPromptText] = useState(
     "This is the text of the prompt that the user can edit."
   );
@@ -42,43 +62,41 @@ export const RunsTab = () => {
   const [runs, setRuns] = useState<Run[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
-  const [currentPromptId, setCurrentPromptId] = useState<number | null>(null);
   const [originalPromptText, setOriginalPromptText] = useState("");
   const [isStarred, setIsStarred] = useState(false);
   const [loading, setLoading] = useState(true);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>(
-    "google/gemini-flash-1.5"
-  );
-  const [comparisonMode, setComparisonMode] = useState<string>("input");
   const { toast } = useToast();
 
-  const loadRun = useCallback(async (run: Run) => {
-    try {
-      setNotes(run.notes || "");
-      setOutput(run.output || "");
-      setSelectedInputId(run.book_input_id?.toString() || "");
-      setIsStarred(run.human_tags?.includes("star") || false);
+  const loadRun = useCallback(
+    async (run: Run) => {
+      try {
+        setNotes(run.notes || "");
+        setOutput(run.output || "");
+        setSelectedInputId(run.book_input_id?.toString() || "");
+        setIsStarred(run.human_tags?.includes("star") || false);
 
-      // Load the prompt for this run
-      if (run.prompt_id) {
-        const { data: prompt, error } = await supabase
-          .from("prompt")
-          .select("*")
-          .eq("id", run.prompt_id)
-          .single();
+        // Load the prompt for this run
+        if (run.prompt_id) {
+          const { data: prompt, error } = await supabase
+            .from("prompt")
+            .select("*")
+            .eq("id", run.prompt_id)
+            .single();
 
-        if (error) throw error;
-        if (prompt) {
-          setPromptText(prompt.user_prompt || "");
-          setOriginalPromptText(prompt.user_prompt || "");
-          setCurrentPromptId(prompt.id);
+          if (error) throw error;
+          if (prompt) {
+            setPromptText(prompt.user_prompt || "");
+            setOriginalPromptText(prompt.user_prompt || "");
+            setCurrentPromptId(prompt.id);
+          }
         }
+      } catch (error) {
+        console.error("Error loading run:", error);
       }
-    } catch (error) {
-      console.error("Error loading run:", error);
-    }
-  }, []);
+    },
+    [setSelectedInputId, setCurrentPromptId]
+  );
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -100,29 +118,21 @@ export const RunsTab = () => {
       if (runsError) throw runsError;
       setRuns(runsData || []);
 
-      const savedPromptId = localStorage.getItem("currentPromptId");
-      const savedInputId = localStorage.getItem("selectedInputId");
-
       let promptLoaded = false;
-      if (savedPromptId) {
+      if (currentPromptId) {
         const { data: prompt, error } = await supabase
           .from("prompt")
           .select("*")
-          .eq("id", parseInt(savedPromptId, 10))
+          .eq("id", currentPromptId)
           .single();
 
         if (prompt && !error) {
           setPromptText(prompt.user_prompt || "");
           setOriginalPromptText(prompt.user_prompt || "");
-          setCurrentPromptId(prompt.id);
           promptLoaded = true;
         } else {
-          localStorage.removeItem("currentPromptId");
+          setCurrentPromptId(null);
         }
-      }
-
-      if (savedInputId) {
-        setSelectedInputId(savedInputId);
       }
 
       // If we have runs, load the most recent one
@@ -139,49 +149,14 @@ export const RunsTab = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadRun, toast]);
+  }, [loadRun, toast, currentPromptId, setCurrentPromptId]);
 
   // Load data on component mount
   useEffect(() => {
     loadInitialData();
     // Fetch models in the background
     getModels().then(setModels);
-
-    const savedModel = localStorage.getItem("selectedModel");
-    if (savedModel) {
-      setSelectedModel(savedModel);
-    }
-
-    const savedComparisonMode = localStorage.getItem("comparisonMode");
-    if (savedComparisonMode) {
-      setComparisonMode(savedComparisonMode);
-    }
   }, [loadInitialData]);
-
-  // Save prompt and input IDs to localStorage
-  useEffect(() => {
-    if (currentPromptId) {
-      localStorage.setItem("currentPromptId", currentPromptId.toString());
-    }
-  }, [currentPromptId]);
-
-  useEffect(() => {
-    if (selectedInputId) {
-      localStorage.setItem("selectedInputId", selectedInputId);
-    }
-  }, [selectedInputId]);
-
-  useEffect(() => {
-    if (selectedModel) {
-      localStorage.setItem("selectedModel", selectedModel);
-    }
-  }, [selectedModel]);
-
-  useEffect(() => {
-    if (comparisonMode) {
-      localStorage.setItem("comparisonMode", comparisonMode);
-    }
-  }, [comparisonMode]);
 
   // Auto-switch to "input" if "reference" is selected but no reference markdown exists
   useEffect(() => {
@@ -193,7 +168,7 @@ export const RunsTab = () => {
     if (comparisonMode === "reference" && !hasRefMarkdown) {
       setComparisonMode("input");
     }
-  }, [selectedInputId, bookInputs, comparisonMode]);
+  }, [selectedInputId, bookInputs, comparisonMode, setComparisonMode]);
 
   // // Save prompt when component unmounts or user navigates away
   // useEffect(() => {
@@ -334,7 +309,6 @@ export const RunsTab = () => {
       return;
     }
 
-    const openRouterApiKey = localStorage.getItem("openRouterApiKey");
     if (!openRouterApiKey) {
       toast({
         title: "API Key not set",
@@ -479,7 +453,12 @@ export const RunsTab = () => {
     if (comparisonMode === "reference" && !hasReferenceMarkdown) {
       setComparisonMode("input");
     }
-  }, [selectedInputId, selectedInput?.reference_markdown, comparisonMode]);
+  }, [
+    selectedInputId,
+    selectedInput?.reference_markdown,
+    comparisonMode,
+    setComparisonMode,
+  ]);
 
   if (loading) {
     return (
@@ -516,10 +495,10 @@ export const RunsTab = () => {
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
                 <h3 className="text-lg font-bold text-gray-900">Prompt</h3>
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={copyPrompt}>
+                  <Button variant="ghost" size="sm" onClick={copyPrompt}>
                     <Copy className="w-4 h-4" />
                   </Button>
-                  <Button onClick={pastePrompt} variant="outline" size="sm">
+                  <Button onClick={pastePrompt} variant="ghost" size="sm">
                     <Clipboard className="h-4 w-4 mr-2" />
                   </Button>
                 </div>
@@ -534,7 +513,7 @@ export const RunsTab = () => {
             </Card>
           </ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel defaultSize={33}>
+          <ResizablePanel defaultSize={23}>
             {/* Show Input Section, using SyntaxHighlighter for markdown */}
             <Card className="p-4 flex flex-col h-full min-h-0">
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
@@ -556,7 +535,7 @@ export const RunsTab = () => {
                   </SelectContent>
                 </Select>
 
-                <Button variant="outline" size="sm" onClick={copyOutput}>
+                <Button variant="ghost" size="sm" onClick={copyOutput}>
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
@@ -580,7 +559,7 @@ export const RunsTab = () => {
             </Card>
           </ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel defaultSize={34}>
+          <ResizablePanel defaultSize={44}>
             <OutputSection
               output={output}
               isRunning={isRunning}

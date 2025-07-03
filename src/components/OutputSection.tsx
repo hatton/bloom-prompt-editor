@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Play, Copy } from "lucide-react";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 interface OpenRouterModel {
   id: string;
@@ -46,30 +47,19 @@ export const OutputSection = ({
   onComparisonModeChange,
   onCopyOutput,
 }: OutputSectionProps) => {
-  // Internal state for diff view options with localStorage persistence
-  const [splitView, setSplitView] = useState<boolean>(() => {
-    const saved = localStorage.getItem("diffSplitView");
-    return saved !== null ? JSON.parse(saved) : true;
-  });
-
-  const [showAll, setShowAll] = useState<boolean>(() => {
-    const saved = localStorage.getItem("diffShowAll");
-    return saved !== null ? JSON.parse(saved) : true;
-  });
-
-  // Save to localStorage when state changes
-  useEffect(() => {
-    localStorage.setItem("diffSplitView", JSON.stringify(splitView));
-  }, [splitView]);
-
-  useEffect(() => {
-    localStorage.setItem("diffShowAll", JSON.stringify(showAll));
-  }, [showAll]);
+  // Diff view options managed by localStorage hook
+  const [splitView, setSplitView] = useLocalStorage<boolean>(
+    "diffSplitView",
+    true
+  );
+  const [showAllLines, setShowAllLines] = useLocalStorage<boolean>(
+    "diffShowAllLines",
+    true
+  );
 
   return (
     <Card className="p-4 flex flex-col h-full min-h-0">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold">Output</h2>
         <div className="flex items-center gap-2">
           <div className="flex items-center space-x-2">
             <Button onClick={onRun} disabled={isRunning}>
@@ -113,15 +103,18 @@ export const OutputSection = ({
                 <Switch checked={splitView} onCheckedChange={setSplitView} />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Show All:</span>
-                <Switch checked={showAll} onCheckedChange={setShowAll} />
+                <span className="text-sm font-medium">All lines:</span>
+                <Switch
+                  checked={showAllLines}
+                  onCheckedChange={setShowAllLines}
+                />
               </div>
             </>
           )}
-          <Button onClick={onCopyOutput} variant="outline" size="sm">
-            <Copy className="h-4 w-4 mr-2" />
-          </Button>
         </div>
+        <Button onClick={onCopyOutput} size="sm" variant="ghost">
+          <Copy className="h-4 w-4 mr-2" />
+        </Button>
       </div>
       <Card className="flex-1 w-full min-h-0">
         <MarkdownViewer
@@ -131,7 +124,7 @@ export const OutputSection = ({
           }
           className="h-full"
           splitView={splitView}
-          showDiffOnly={!showAll}
+          showDiffOnly={!showAllLines}
         />
       </Card>
     </Card>
