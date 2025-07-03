@@ -1,5 +1,10 @@
 import OpenAI from "openai";
-import { generateText, CoreUserMessage, CoreSystemMessage } from "ai";
+import {
+  generateText,
+  streamText,
+  CoreUserMessage,
+  CoreSystemMessage,
+} from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
 interface OpenRouterModel {
@@ -62,4 +67,43 @@ export async function runPrompt(
 
   const result = await generateText(generateOptions);
   return result.text;
+}
+
+export async function runPromptStream(
+  llmPrompt: string,
+  markdown: string,
+  modelId: string,
+  apiKey: string,
+  temperature: number = 0.0,
+  abortSignal?: AbortSignal
+) {
+  const openrouterProvider = createOpenRouter({
+    apiKey: apiKey,
+  });
+
+  // let's set the maxTokens to at least the length of the markdown content
+  // because we're typically working on minority languages so can expect poor tokenization.
+  const maxTokens = markdown.length + 2000; // Adding a buffer of 2000 tokens for metadata and new tagging
+  const messages: Array<CoreUserMessage | CoreSystemMessage> = [
+    {
+      role: "system",
+      content: llmPrompt,
+    },
+  ];
+
+  messages.push({
+    role: "user",
+    content: `Here is the Markdown content:\n\n${markdown}`,
+  });
+
+  // Call the AI model to stream the response
+  const result = await streamText({
+    model: openrouterProvider(modelId),
+    messages,
+    temperature,
+    maxTokens,
+    abortSignal,
+  });
+
+  return result.textStream;
 }

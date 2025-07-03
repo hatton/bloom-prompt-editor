@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   runPrompt,
+  runPromptStream,
   getModels,
 } from "@/integrations/openrouter/openRouterClient";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
@@ -66,6 +68,8 @@ export const RunsTab = () => {
   const [runs, setRuns] = useState<Run[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
   const [originalPromptSettings, setOriginalPromptSettings] = useState({
     promptText: "",
     temperature: 0,
@@ -338,8 +342,11 @@ export const RunsTab = () => {
       return;
     }
 
+    // Create abort controller for stopping
+    const controller = new AbortController();
+    setAbortController(controller);
     setIsRunning(true);
-    setOutput("");
+    setOutput(""); // Clear previous output
 
     try {
       // Save new prompt if changed before running
@@ -355,47 +362,115 @@ export const RunsTab = () => {
           variant: "destructive",
         });
         setIsRunning(false);
+        setAbortController(null);
         return;
       }
 
-      const result = await runPrompt(
+      // Get the stream with abort signal
+      const textStream = await runPromptStream(
         promptSettings.promptText,
         selectedInput.ocr_markdown || "",
         selectedModel,
         openRouterApiKey,
-        promptSettings.temperature
+        promptSettings.temperature,
+        controller.signal
       );
 
-      // Create new run
-      const { data: newRun, error: runError } = await supabase
-        .from("run")
-        .insert({
-          prompt_id: promptId,
-          book_input_id: parseInt(selectedInputId),
-          output: result,
-          notes: notes,
-        })
-        .select()
-        .single();
+      let fullResult = "";
 
-      if (runError) throw runError;
+      // Process stream with abort support
+      const processStreamInBackground = async () => {
+        try {
+          const reader = textStream.getReader();
+          let result = "";
 
-      // Update local state
-      setRuns((prev) => [newRun, ...prev]);
-      setCurrentRunIndex(0);
-      setOutput(result);
+          while (true) {
+            // Check if abort was requested before reading
+            if (controller.signal.aborted) {
+              reader.releaseLock();
+              throw new DOMException("Stream aborted", "AbortError");
+            }
 
-      toast({
-        title: "Run completed successfully",
-      });
+            const { done, value } = await reader.read();
+
+            if (done) {
+              reader.releaseLock();
+              break;
+            }
+
+            result += value;
+            fullResult = result;
+
+            // Use flushSync to force immediate DOM update
+            flushSync(() => {
+              setOutput(result);
+            });
+          }
+
+          return result;
+        } catch (error) {
+          if (
+            error.name === "AbortError" ||
+            error.message === "Stream aborted"
+          ) {
+            console.log("Stream was aborted by user");
+            return fullResult; // Return partial result
+          }
+          console.error("Stream processing error:", error);
+          throw error;
+        }
+      };
+
+      // Start the streaming
+      fullResult = await processStreamInBackground();
+
+      // Only save to database if not aborted
+      if (!controller.signal.aborted) {
+        // Create new run with the complete result
+        const { data: newRun, error: runError } = await supabase
+          .from("run")
+          .insert({
+            prompt_id: promptId,
+            book_input_id: parseInt(selectedInputId),
+            output: fullResult,
+            notes: notes,
+          })
+          .select()
+          .single();
+
+        if (runError) throw runError;
+
+        // Update local state
+        setRuns((prev) => [newRun, ...prev]);
+        setCurrentRunIndex(0);
+
+        toast({
+          title: "Run completed successfully",
+        });
+      }
     } catch (error) {
-      console.error("Error running prompt:", error);
-      toast({
-        title: "Error running prompt",
-        variant: "destructive",
-      });
+      if (error.name !== "AbortError" && error.message !== "Stream aborted") {
+        console.error("Error running prompt:", error);
+        toast({
+          title: "Error running prompt",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Run stopped",
+          duration: 1000,
+        });
+      }
     } finally {
       setIsRunning(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleStop = () => {
+    if (abortController) {
+      abortController.abort();
+      // Note: The toast will be shown in the catch block of handleRun
     }
   };
 
@@ -545,6 +620,7 @@ export const RunsTab = () => {
               currentInput={currentInput}
               referenceMarkdown={referenceMarkdown}
               onRun={handleRun}
+              onStop={handleStop}
               onModelChange={setSelectedModel}
               onComparisonModeChange={setComparisonMode}
               onCopyOutput={copyOutput}

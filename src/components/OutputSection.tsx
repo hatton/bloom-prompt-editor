@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { Play, Copy } from "lucide-react";
+import { Play, Copy, Square } from "lucide-react";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
@@ -28,6 +28,7 @@ interface OutputSectionProps {
   currentInput: string;
   referenceMarkdown: string;
   onRun: () => void;
+  onStop?: () => void;
   onModelChange: (value: string) => void;
   onComparisonModeChange: (value: string) => void;
   onCopyOutput: () => void;
@@ -43,6 +44,7 @@ export const OutputSection = ({
   currentInput,
   referenceMarkdown,
   onRun,
+  onStop,
   onModelChange,
   onComparisonModeChange,
   onCopyOutput,
@@ -66,15 +68,21 @@ export const OutputSection = ({
               <Play className="h-4 w-4 mr-2" />
               {isRunning ? "Running..." : "Run"}
             </Button>
+            {isRunning && onStop && (
+              <Button onClick={onStop} variant="outline" size="sm">
+                <Square className="h-4 w-4 mr-2" />
+                Stop
+              </Button>
+            )}
           </div>
           <Select value={selectedModel} onValueChange={onModelChange}>
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Select a model" />
             </SelectTrigger>
             <SelectContent>
               {models.map((model) => (
                 <SelectItem key={model.id} value={model.id}>
-                  {model.name}
+                  {model.name.replace(/^Google:\s*/, "")}
                 </SelectItem>
               ))}
             </SelectContent>
