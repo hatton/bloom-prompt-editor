@@ -38,7 +38,7 @@ export type Database = {
           created_at: string;
           id: number;
           label: string | null;
-          system_prompt: string | null;
+          notes: string | null;
           user_prompt: string | null;
           temperature: number | null;
           thinking_token_budget: number | null;
@@ -47,7 +47,7 @@ export type Database = {
           created_at?: string;
           id?: number;
           label?: string | null;
-          system_prompt?: string | null;
+          notes?: string | null;
           user_prompt?: string | null;
           temperature?: number | null;
           thinking_token_budget?: number | null;
@@ -56,7 +56,7 @@ export type Database = {
           created_at?: string;
           id?: number;
           label?: string | null;
-          system_prompt?: string | null;
+          notes?: string | null;
           user_prompt?: string | null;
           temperature?: number | null;
           thinking_token_budget?: number | null;

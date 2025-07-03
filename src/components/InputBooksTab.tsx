@@ -249,7 +249,7 @@ export const InputBooksTab = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+      <div className="flex items-center justify-center">
         <div className="text-center text-gray-500">
           <p className="text-lg">Loading inputs...</p>
         </div>
@@ -258,10 +258,10 @@ export const InputBooksTab = () => {
   }
 
   return (
-    <div className="flex h-[calc(100vh-200px)]">
+    <div className="flex h-full">
       {/* Sidebar - Input List */}
-      <div className="w-80 bg-blue-200">
-        <div className="p-4  border-gray-200">
+      <div className="w-80 bg-blue-200 flex flex-col">
+        <div className="p-4 border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-medium text-gray-900">Input Books</h3>
             <Button
@@ -275,7 +275,7 @@ export const InputBooksTab = () => {
           </div>
         </div>
 
-        <div className="p-4 space-y-2 overflow-y-auto">
+        <div className="p-4 space-y-2 overflow-y-auto flex-1">
           {bookInputs.map((input) => (
             <Card
               key={input.id}

@@ -227,7 +227,7 @@ export const RunsTab = () => {
           user_prompt: promptSettings.promptText,
           temperature: promptSettings.temperature,
 
-          label: "Generated Prompt",
+          label: "",
         })
         .select()
         .single();
