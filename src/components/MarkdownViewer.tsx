@@ -72,16 +72,18 @@ export class MarkdownDiffViewer extends PureComponent<MarkdownViewerProps> {
       return <MarkdownViewer content={content} {...rest} />;
     }
     return (
-      <ReactDiffViewer
-        oldValue={compareWithText}
-        newValue={content}
-        splitView={splitView}
-        hideLineNumbers={true}
-        hideMarkers={true}
-        showDiffOnly={showDiffOnly}
-        extraLinesSurroundingDiff={1}
-        {...rest}
-      />
+      <div style={{ height: "100%", overflowY: "auto" }}>
+        <ReactDiffViewer
+          oldValue={compareWithText}
+          newValue={content}
+          splitView={splitView}
+          hideLineNumbers={true}
+          hideMarkers={true}
+          showDiffOnly={showDiffOnly}
+          extraLinesSurroundingDiff={1}
+          {...rest}
+        />
+      </div>
     );
   }
 }
