@@ -13,7 +13,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { runPrompt, getModels } from "@/integrations/openrouter/client";
+import {
+  runPrompt,
+  getModels,
+} from "@/integrations/openrouter/openRouterClient";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { OutputSection } from "@/components/OutputSection";
 import { PromptCard } from "@/components/PromptCard";
@@ -53,16 +56,20 @@ export const RunsTab = () => {
   const [openRouterApiKey] = useLocalStorage<string>("openRouterApiKey", "");
 
   // Other state
-  const [promptText, setPromptText] = useState(
-    "This is the text of the prompt that the user can edit."
-  );
+  const [promptSettings, setPromptSettings] = useState({
+    promptText: "This is the text of the prompt that the user can edit.",
+    temperature: 0,
+  });
   const [notes, setNotes] = useState("");
   const [output, setOutput] = useState("");
   const [currentRunIndex, setCurrentRunIndex] = useState(0);
   const [runs, setRuns] = useState<Run[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
-  const [originalPromptText, setOriginalPromptText] = useState("");
+  const [originalPromptSettings, setOriginalPromptSettings] = useState({
+    promptText: "",
+    temperature: 0,
+  });
   const [isStarred, setIsStarred] = useState(false);
   const [loading, setLoading] = useState(true);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
@@ -86,8 +93,12 @@ export const RunsTab = () => {
 
           if (error) throw error;
           if (prompt) {
-            setPromptText(prompt.user_prompt || "");
-            setOriginalPromptText(prompt.user_prompt || "");
+            const newPromptSettings = {
+              promptText: prompt.user_prompt || "",
+              temperature: prompt.temperature ?? 0,
+            };
+            setPromptSettings(newPromptSettings);
+            setOriginalPromptSettings(newPromptSettings);
             setCurrentPromptId(prompt.id);
           }
         }
@@ -127,8 +138,12 @@ export const RunsTab = () => {
           .single();
 
         if (prompt && !error) {
-          setPromptText(prompt.user_prompt || "");
-          setOriginalPromptText(prompt.user_prompt || "");
+          const newPromptSettings = {
+            promptText: prompt.user_prompt || "",
+            temperature: prompt.temperature ?? 0,
+          };
+          setPromptSettings(newPromptSettings);
+          setOriginalPromptSettings(newPromptSettings);
           promptLoaded = true;
         } else {
           setCurrentPromptId(null);
@@ -192,7 +207,10 @@ export const RunsTab = () => {
   // }, []);
 
   const hasPromptChanged = () => {
-    return promptText !== originalPromptText;
+    return (
+      promptSettings.promptText !== originalPromptSettings.promptText ||
+      promptSettings.temperature !== originalPromptSettings.temperature
+    );
   };
 
   const saveNewPromptIfChanged = async () => {
@@ -202,7 +220,9 @@ export const RunsTab = () => {
       const { data: newPrompt, error } = await supabase
         .from("prompt")
         .insert({
-          user_prompt: promptText,
+          user_prompt: promptSettings.promptText,
+          temperature: promptSettings.temperature,
+
           label: "Generated Prompt",
         })
         .select()
@@ -211,7 +231,7 @@ export const RunsTab = () => {
       if (error) throw error;
 
       setCurrentPromptId(newPrompt.id);
-      setOriginalPromptText(promptText);
+      setOriginalPromptSettings(promptSettings);
 
       // Update the current run to point to the new prompt
       if (runs[currentRunIndex]) {
@@ -339,10 +359,11 @@ export const RunsTab = () => {
       }
 
       const result = await runPrompt(
-        promptText,
+        promptSettings.promptText,
         selectedInput.ocr_markdown || "",
         selectedModel,
-        openRouterApiKey
+        openRouterApiKey,
+        promptSettings.temperature
       );
 
       // Create new run
@@ -461,8 +482,8 @@ export const RunsTab = () => {
           <ResizablePanel defaultSize={33}>
             {/* Prompt Section */}
             <PromptCard
-              promptText={promptText}
-              onPromptChange={setPromptText}
+              promptSettings={promptSettings}
+              onPromptSettingsChange={setPromptSettings}
               onBlur={saveNewPromptIfChanged}
             />
           </ResizablePanel>

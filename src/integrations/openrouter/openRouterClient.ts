@@ -30,7 +30,8 @@ export async function runPrompt(
   llmPrompt: string,
   markdown: string,
   modelId: string,
-  apiKey: string
+  apiKey: string,
+  temperature: number = 0.0
 ) {
   const openrouterProvider = createOpenRouter({
     apiKey: apiKey,
@@ -50,13 +51,15 @@ export async function runPrompt(
     role: "user",
     content: `Here is the Markdown content:\n\n${markdown}`,
   });
+
   // Call the AI model to enrich the markdown
-  const result = await generateText({
-    model: openrouterProvider(modelId), // todo: use the currently selected model
+  const generateOptions = {
+    model: openrouterProvider(modelId),
     messages,
-    temperature: 0.0, // Deterministic, no creativity needed
+    temperature,
     maxTokens,
-    toolChoice: "none" /* no thinking. "auto" might allow thinking */,
-  });
+  };
+
+  const result = await generateText(generateOptions);
   return result.text;
 }

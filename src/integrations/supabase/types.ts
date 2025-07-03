@@ -40,6 +40,8 @@ export type Database = {
           label: string | null;
           system_prompt: string | null;
           user_prompt: string | null;
+          temperature: number | null;
+          thinking_token_budget: number | null;
         };
         Insert: {
           created_at?: string;
@@ -47,6 +49,8 @@ export type Database = {
           label?: string | null;
           system_prompt?: string | null;
           user_prompt?: string | null;
+          temperature?: number | null;
+          thinking_token_budget?: number | null;
         };
         Update: {
           created_at?: string;
@@ -54,6 +58,8 @@ export type Database = {
           label?: string | null;
           system_prompt?: string | null;
           user_prompt?: string | null;
+          temperature?: number | null;
+          thinking_token_budget?: number | null;
         };
         Relationships: [];
       };
