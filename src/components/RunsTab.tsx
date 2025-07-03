@@ -7,9 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, ArrowRight, Star, Copy, Clipboard } from "lucide-react";
+import { ArrowLeft, ArrowRight, Star, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +16,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { runPrompt, getModels } from "@/integrations/openrouter/client";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { OutputSection } from "@/components/OutputSection";
+import { PromptCard } from "@/components/PromptCard";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -393,37 +393,6 @@ export const RunsTab = () => {
     }
   };
 
-  const copyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(promptText);
-      toast({
-        title: "Prompt copied to clipboard",
-        duration: 1000,
-      });
-    } catch (err) {
-      toast({
-        title: "Failed to copy prompt",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const pastePrompt = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setPromptText(text);
-      toast({
-        title: "Prompt pasted from clipboard",
-        duration: 1000,
-      });
-    } catch (err) {
-      toast({
-        title: "Failed to paste content",
-        variant: "destructive",
-      });
-    }
-  };
-
   const copyOutput = async () => {
     try {
       await navigator.clipboard.writeText(output);
@@ -491,26 +460,11 @@ export const RunsTab = () => {
         >
           <ResizablePanel defaultSize={33}>
             {/* Prompt Section */}
-            <Card className="p-4 flex flex-col h-full min-h-0">
-              <div className="flex items-center justify-between mb-3 flex-shrink-0">
-                <h3 className="text-lg font-bold text-gray-900">Prompt</h3>
-                <div className="flex space-x-2">
-                  <Button variant="ghost" size="sm" onClick={copyPrompt}>
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                  <Button onClick={pastePrompt} variant="ghost" size="sm">
-                    <Clipboard className="h-4 w-4 mr-2" />
-                  </Button>
-                </div>
-              </div>
-              <Textarea
-                value={promptText}
-                onChange={(e) => setPromptText(e.target.value)}
-                className="flex-1 resize-none font-mono text-sm min-h-0"
-                placeholder="Enter your prompt here..."
-                onBlur={saveNewPromptIfChanged}
-              />
-            </Card>
+            <PromptCard
+              promptText={promptText}
+              onPromptChange={setPromptText}
+              onBlur={saveNewPromptIfChanged}
+            />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={23}>
