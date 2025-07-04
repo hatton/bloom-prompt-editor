@@ -66,12 +66,20 @@ export const SettingsTab = ({ ReadinessChanged }: SettingsTabProps) => {
             Your API key is stored securely in your browser's local storage.
           </p>
         </div>
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
         {user && (
           <div className="border-t pt-4 space-y-2">
             <p className="text-sm text-gray-700">
               Logged in as: <span className="font-medium">{user.email}</span>
             </p>
-            <Button variant="destructive" onClick={handleLogout} size="sm">
+            <Button onClick={handleLogout} size="sm">
               Logout
             </Button>
           </div>

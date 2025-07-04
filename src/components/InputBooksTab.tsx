@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { InlineToast } from "@/components/ui/inline-toast";
 import { Plus, Trash2, Clipboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +20,21 @@ export const InputBooksTab = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  // Inline toast state
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [savedToastMessage, setSavedToastMessage] = useState("");
+  const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorToastMessage, setErrorToastMessage] = useState("");
+  const [toastFieldType, setToastFieldType] = useState<
+    "label" | "ocr_markdown" | "reference_markdown" | null
+  >(null);
+
+  // Track original values to detect changes
+  const [originalLabel, setOriginalLabel] = useState("");
+  const [originalMarkdown, setOriginalMarkdown] = useState("");
+  const [originalReferenceMarkdown, setOriginalReferenceMarkdown] =
+    useState("");
 
   const loadBookInputs = useCallback(async () => {
     try {
@@ -56,77 +72,103 @@ export const InputBooksTab = () => {
         (input) => input.id === selectedInputId
       );
       if (selectedInput) {
-        setCurrentLabel(selectedInput.label || "");
-        setCurrentMarkdown(selectedInput.ocr_markdown || "");
-        setCurrentReferenceMarkdown(selectedInput.reference_markdown || "");
+        const label = selectedInput.label || "";
+        const markdown = selectedInput.ocr_markdown || "";
+        const referenceMarkdown = selectedInput.reference_markdown || "";
+
+        setCurrentLabel(label);
+        setCurrentMarkdown(markdown);
+        setCurrentReferenceMarkdown(referenceMarkdown);
         setHasUnsavedChanges(false);
+
+        // Set original values
+        setOriginalLabel(label);
+        setOriginalMarkdown(markdown);
+        setOriginalReferenceMarkdown(referenceMarkdown);
       }
     }
   }, [selectedInputId, bookInputs]);
 
-  const saveCurrentInput = useCallback(async () => {
-    if (selectedInputId) {
-      try {
-        const { error } = await supabase
-          .from("book-input")
-          .update({
-            label: currentLabel,
-            ocr_markdown: currentMarkdown,
-            reference_markdown: currentReferenceMarkdown,
-          })
-          .eq("id", selectedInputId);
+  const saveCurrentInput = useCallback(
+    async (showToast = false) => {
+      if (selectedInputId) {
+        try {
+          const { error } = await supabase
+            .from("book-input")
+            .update({
+              label: currentLabel,
+              ocr_markdown: currentMarkdown,
+              reference_markdown: currentReferenceMarkdown,
+            })
+            .eq("id", selectedInputId);
 
-        if (error) throw error;
+          if (error) throw error;
 
-        setBookInputs((prev) =>
-          prev.map((input) =>
-            input.id === selectedInputId
-              ? {
-                  ...input,
-                  label: currentLabel,
-                  ocr_markdown: currentMarkdown,
-                  reference_markdown: currentReferenceMarkdown,
-                }
-              : input
-          )
-        );
-        setHasUnsavedChanges(false);
-        toast({
-          title: "Input saved",
-          duration: 1000,
-        });
-      } catch (error) {
-        console.error("Error saving input:", error);
-        toast({
-          title: "Error saving input",
-          variant: "destructive",
-        });
+          setBookInputs((prev) =>
+            prev.map((input) =>
+              input.id === selectedInputId
+                ? {
+                    ...input,
+                    label: currentLabel,
+                    ocr_markdown: currentMarkdown,
+                    reference_markdown: currentReferenceMarkdown,
+                  }
+                : input
+            )
+          );
+          setHasUnsavedChanges(false);
+
+          if (showToast) {
+            setSavedToastMessage("Input saved");
+            setShowSavedToast(true);
+          }
+
+          // Update original values after successful save
+          setOriginalLabel(currentLabel);
+          setOriginalMarkdown(currentMarkdown);
+          setOriginalReferenceMarkdown(currentReferenceMarkdown);
+        } catch (error) {
+          console.error("Error saving input:", error);
+          if (showToast) {
+            setErrorToastMessage("Error saving input");
+            setShowErrorToast(true);
+          }
+        }
       }
-    }
-  }, [
-    selectedInputId,
-    currentLabel,
-    currentMarkdown,
-    currentReferenceMarkdown,
-    toast,
-  ]);
+    },
+    [currentLabel, currentMarkdown, currentReferenceMarkdown, selectedInputId]
+  );
 
-  // Auto-save changes
+  // Save changes before switching inputs or unmounting
   useEffect(() => {
-    if (hasUnsavedChanges && selectedInputId) {
-      const timer = setTimeout(() => {
-        saveCurrentInput();
-      }, 1000);
+    const previousInputIdRef = { current: selectedInputId };
 
-      return () => clearTimeout(timer);
-    }
+    return () => {
+      // Save changes when component unmounts or input changes
+      if (hasUnsavedChanges && previousInputIdRef.current) {
+        const saveData = async () => {
+          try {
+            await supabase
+              .from("book-input")
+              .update({
+                label: currentLabel,
+                ocr_markdown: currentMarkdown,
+                reference_markdown: currentReferenceMarkdown,
+              })
+              .eq("id", previousInputIdRef.current);
+          } catch (error) {
+            console.error("Error saving before unmount:", error);
+          }
+        };
+        saveData();
+      }
+    };
   }, [
+    selectedInputId,
+    hasUnsavedChanges,
     currentLabel,
     currentMarkdown,
     currentReferenceMarkdown,
-    hasUnsavedChanges,
-    selectedInputId,
-    saveCurrentInput,
   ]);
 
   const handleLabelChange = (value: string) => {
@@ -142,6 +184,111 @@ export const InputBooksTab = () => {
   const handleReferenceMarkdownChange = (value: string) => {
     setCurrentReferenceMarkdown(value);
     setHasUnsavedChanges(true);
+  };
+
+  // Individual save functions for each field
+  const saveIfChanged = async (
+    fieldName: string,
+    currentValue: string,
+    originalValue: string
+  ) => {
+    if (currentValue !== originalValue && selectedInputId) {
+      try {
+        const updateData: Record<string, string> = {};
+
+        if (fieldName === "label") {
+          updateData.label = currentValue;
+          setOriginalLabel(currentValue);
+        } else if (fieldName === "ocr_markdown") {
+          updateData.ocr_markdown = currentValue;
+          setOriginalMarkdown(currentValue);
+        } else if (fieldName === "reference_markdown") {
+          updateData.reference_markdown = currentValue;
+          setOriginalReferenceMarkdown(currentValue);
+        }
+
+        const { error } = await supabase
+          .from("book-input")
+          .update(updateData)
+          .eq("id", selectedInputId);
+
+        if (error) throw error;
+
+        // Update local state
+        setBookInputs((prev) =>
+          prev.map((input) =>
+            input.id === selectedInputId ? { ...input, ...updateData } : input
+          )
+        );
+
+        // Check if all fields are now saved by comparing current values with what they will be after this save
+        const updatedOriginalLabel =
+          fieldName === "label" ? currentValue : originalLabel;
+        const updatedOriginalMarkdown =
+          fieldName === "ocr_markdown" ? currentValue : originalMarkdown;
+        const updatedOriginalReferenceMarkdown =
+          fieldName === "reference_markdown"
+            ? currentValue
+            : originalReferenceMarkdown;
+
+        const allSaved =
+          currentLabel === updatedOriginalLabel &&
+          currentMarkdown === updatedOriginalMarkdown &&
+          currentReferenceMarkdown === updatedOriginalReferenceMarkdown;
+
+        if (allSaved) {
+          setHasUnsavedChanges(false);
+        }
+
+        setSavedToastMessage(
+          `${fieldName
+            .replace("_", " ")
+            .replace(/\b\w/g, (l) => l.toUpperCase())} saved`
+        );
+        setToastFieldType(
+          fieldName as "label" | "ocr_markdown" | "reference_markdown"
+        );
+        setShowSavedToast(true);
+      } catch (error) {
+        console.error(`Error saving ${fieldName}:`, error);
+        setErrorToastMessage(`Error saving ${fieldName.replace("_", " ")}`);
+        setToastFieldType(
+          fieldName as "label" | "ocr_markdown" | "reference_markdown"
+        );
+        setShowErrorToast(true);
+      }
+    }
+  };
+
+  // Blur handlers for each field
+  const handleLabelBlur = () => {
+    saveIfChanged("label", currentLabel, originalLabel);
+  };
+
+  const handleMarkdownBlur = () => {
+    saveIfChanged("ocr_markdown", currentMarkdown, originalMarkdown);
+  };
+
+  const handleReferenceMarkdownBlur = () => {
+    saveIfChanged(
+      "reference_markdown",
+      currentReferenceMarkdown,
+      originalReferenceMarkdown
+    );
+  };
+
+  const handleToastClose = () => {
+    setShowSavedToast(false);
+    setShowErrorToast(false);
+    setToastFieldType(null);
+  };
+
+  const handleInputSelection = async (inputId: number) => {
+    // Save current changes before switching if any
+    if (hasUnsavedChanges && selectedInputId) {
+      await saveCurrentInput(false);
+    }
+    setSelectedInputId(inputId);
   };
 
   const addNewInput = async () => {
@@ -263,7 +410,6 @@ export const InputBooksTab = () => {
       <div className="w-80 bg-blue-200 flex flex-col">
         <div className="p-4 border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-medium text-gray-900">Input Books</h3>
             <Button
               onClick={addNewInput}
               size="sm"
@@ -284,7 +430,7 @@ export const InputBooksTab = () => {
                   ? "bg-white border-blue-600 shadow-sm border-[3px]"
                   : "hover:bg-gray-50"
               }`}
-              onClick={() => setSelectedInputId(input.id)}
+              onClick={() => handleInputSelection(input.id)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
@@ -332,12 +478,36 @@ export const InputBooksTab = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Label
                 </label>
-                <Input
-                  value={currentLabel}
-                  onChange={(e) => handleLabelChange(e.target.value)}
-                  placeholder="Enter input label..."
-                  className="w-[20em]"
-                />
+                <div className="relative w-[20em]">
+                  <Input
+                    value={currentLabel}
+                    onChange={(e) => handleLabelChange(e.target.value)}
+                    onBlur={handleLabelBlur}
+                    placeholder="Enter input label..."
+                    className="w-full"
+                  />
+                  {/* Toast for Label field */}
+                  {toastFieldType === "label" && (
+                    <div className="absolute top-full left-0 mt-2 z-10">
+                      {showSavedToast && (
+                        <InlineToast
+                          title={savedToastMessage}
+                          variant="default"
+                          duration={2000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                      {showErrorToast && (
+                        <InlineToast
+                          title={errorToastMessage}
+                          variant="destructive"
+                          duration={3000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -352,12 +522,36 @@ export const InputBooksTab = () => {
                     <Clipboard className="w-4 h-4" />
                   </Button>
                 </div>
-                <Textarea
-                  value={currentMarkdown}
-                  onChange={(e) => handleMarkdownChange(e.target.value)}
-                  placeholder="Enter your OCR markdown content here..."
-                  className="flex-1 resize-none font-mono text-sm min-h-[200px]"
-                />
+                <div className="relative flex-1 flex">
+                  <Textarea
+                    value={currentMarkdown}
+                    onChange={(e) => handleMarkdownChange(e.target.value)}
+                    onBlur={handleMarkdownBlur}
+                    placeholder="Enter your OCR markdown content here..."
+                    className="flex-1 resize-none font-mono text-sm min-h-[200px]"
+                  />
+                  {/* Toast for OCR Markdown field */}
+                  {toastFieldType === "ocr_markdown" && (
+                    <div className="absolute bottom-2 right-2 z-10">
+                      {showSavedToast && (
+                        <InlineToast
+                          title={savedToastMessage}
+                          variant="default"
+                          duration={2000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                      {showErrorToast && (
+                        <InlineToast
+                          title={errorToastMessage}
+                          variant="destructive"
+                          duration={3000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Reference Markdown Section */}
@@ -374,14 +568,38 @@ export const InputBooksTab = () => {
                     <Clipboard className="w-4 h-4" />
                   </Button>
                 </div>
-                <Textarea
-                  value={currentReferenceMarkdown}
-                  onChange={(e) =>
-                    handleReferenceMarkdownChange(e.target.value)
-                  }
-                  placeholder="Enter your reference markdown content here..."
-                  className="flex-1 resize-none font-mono text-sm min-h-[200px]"
-                />
+                <div className="relative flex-1 flex">
+                  <Textarea
+                    value={currentReferenceMarkdown}
+                    onChange={(e) =>
+                      handleReferenceMarkdownChange(e.target.value)
+                    }
+                    onBlur={handleReferenceMarkdownBlur}
+                    placeholder="Enter your reference markdown content here..."
+                    className="flex-1 resize-none font-mono text-sm min-h-[200px]"
+                  />
+                  {/* Toast for Reference Markdown field */}
+                  {toastFieldType === "reference_markdown" && (
+                    <div className="absolute bottom-2 right-2 z-10">
+                      {showSavedToast && (
+                        <InlineToast
+                          title={savedToastMessage}
+                          variant="default"
+                          duration={2000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                      {showErrorToast && (
+                        <InlineToast
+                          title={errorToastMessage}
+                          variant="destructive"
+                          duration={3000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

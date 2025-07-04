@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InlineToast } from "@/components/ui/inline-toast";
 import {
   Select,
   SelectContent,
@@ -57,6 +58,10 @@ export const PromptCard = ({
   const [inputValue, setInputValue] = useState(label);
   const [savedPrompts, setSavedPrompts] = useState<Prompt[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [showSavedToast, setShowSavedToast] = useState(false);
+  const [savedToastMessage, setSavedToastMessage] = useState("");
+  const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorToastMessage, setErrorToastMessage] = useState("");
 
   // Load saved prompts from database on mount
   useEffect(() => {
@@ -119,10 +124,8 @@ export const PromptCard = ({
       }
 
       onLabelChange?.(labelText);
-      toast({
-        title: `Saved prompt as "${labelText}"`,
-        duration: 2000,
-      });
+      setSavedToastMessage(`Saved prompt as "${labelText}"`);
+      setShowSavedToast(true);
 
       // Refresh the saved prompts list
       const { data: prompts, error } = await supabase
@@ -137,10 +140,8 @@ export const PromptCard = ({
       }
     } catch (error) {
       console.error("Failed to save prompt:", error);
-      toast({
-        title: "Failed to save prompt",
-        variant: "destructive",
-      });
+      setErrorToastMessage("Failed to save prompt");
+      setShowErrorToast(true);
     }
   };
 
@@ -231,7 +232,7 @@ export const PromptCard = ({
   };
 
   return (
-    <Card className="p-4 flex flex-col h-full min-h-0">
+    <Card className="p-4 flex flex-col h-full min-h-0 relative">
       <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <h3 className="text-lg font-bold text-gray-900">Prompt</h3>
         <div className="flex items-center space-x-2">
@@ -338,6 +339,27 @@ export const PromptCard = ({
         placeholder="Enter your prompt here..."
         onBlur={handlePromptBlur}
       />
+
+      {/* Inline Toast Messages */}
+      <div className="absolute bottom-4 left-4 right-4 z-10">
+        {showSavedToast && (
+          <InlineToast
+            title={savedToastMessage}
+            variant="default"
+            duration={2000}
+            onClose={() => setShowSavedToast(false)}
+            className="mb-2"
+          />
+        )}
+        {showErrorToast && (
+          <InlineToast
+            title={errorToastMessage}
+            variant="destructive"
+            duration={3000}
+            onClose={() => setShowErrorToast(false)}
+          />
+        )}
+      </div>
     </Card>
   );
 };
