@@ -26,80 +26,131 @@ import { Copy, Clipboard, ChevronDown, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface PromptSettings {
   promptText: string;
   temperature: number;
 }
 
-interface SavedPrompt {
-  label: string;
-  promptText: string;
-  temperature: number;
-  timestamp: number;
-}
+type Prompt = Tables<"prompt">;
 
 interface PromptCardProps {
   promptSettings: PromptSettings;
   onPromptSettingsChange: (settings: PromptSettings) => void;
   onBlur?: () => void;
+  currentPromptId?: number | null;
+  label?: string;
+  onLabelChange?: (label: string) => void;
 }
 
 export const PromptCard = ({
   promptSettings,
   onPromptSettingsChange,
   onBlur,
+  currentPromptId,
+  label = "",
+  onLabelChange,
 }: PromptCardProps) => {
   const { toast } = useToast();
-  const [label, setLabel] = useState("");
-  const [previousLabel, setPreviousLabel] = useState("");
-  const [inputValue, setInputValue] = useState("");
-  const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>([]);
+  const [inputValue, setInputValue] = useState(label);
+  const [savedPrompts, setSavedPrompts] = useState<Prompt[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Load saved prompts from localStorage on mount
+  // Load saved prompts from database on mount
   useEffect(() => {
-    const stored = localStorage.getItem("savedPrompts");
-    if (stored) {
+    const loadSavedPrompts = async () => {
       try {
-        setSavedPrompts(JSON.parse(stored));
+        const { data: prompts, error } = await supabase
+          .from("prompt")
+          .select("*")
+          .not("label", "is", null)
+          .not("label", "eq", "")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        setSavedPrompts(prompts || []);
       } catch (error) {
-        console.error("Failed to parse saved prompts:", error);
+        console.error("Failed to load saved prompts:", error);
       }
-    }
+    };
+
+    loadSavedPrompts();
   }, []);
 
-  const savePrompt = (labelText: string) => {
-    if (labelText.trim()) {
-      const newPrompt: SavedPrompt = {
-        label: labelText,
-        promptText: promptSettings.promptText,
-        temperature: promptSettings.temperature,
-        timestamp: Date.now(),
-      };
+  // Update input value when label prop changes
+  useEffect(() => {
+    setInputValue(label);
+  }, [label]);
 
-      // Update saved prompts - replace if label exists, otherwise add
-      const updatedPrompts = savedPrompts.filter((p) => p.label !== labelText);
-      updatedPrompts.push(newPrompt);
+  const savePrompt = async (labelText: string) => {
+    if (!labelText.trim()) return;
 
-      setSavedPrompts(updatedPrompts);
-      localStorage.setItem("savedPrompts", JSON.stringify(updatedPrompts));
+    try {
+      if (currentPromptId) {
+        // Update existing prompt
+        const { error } = await supabase
+          .from("prompt")
+          .update({
+            label: labelText,
+            user_prompt: promptSettings.promptText,
+            temperature: promptSettings.temperature,
+          })
+          .eq("id", currentPromptId);
 
+        if (error) throw error;
+      } else {
+        // Create new prompt
+        const { data: newPrompt, error } = await supabase
+          .from("prompt")
+          .insert({
+            label: labelText,
+            user_prompt: promptSettings.promptText,
+            temperature: promptSettings.temperature,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Add to local state
+        setSavedPrompts((prev) => [newPrompt, ...prev]);
+      }
+
+      onLabelChange?.(labelText);
       toast({
-        title: `Saved Prompt as ${labelText}`,
+        title: `Saved prompt as "${labelText}"`,
         duration: 2000,
+      });
+
+      // Refresh the saved prompts list
+      const { data: prompts, error } = await supabase
+        .from("prompt")
+        .select("*")
+        .not("label", "is", null)
+        .not("label", "eq", "")
+        .order("created_at", { ascending: false });
+
+      if (!error) {
+        setSavedPrompts(prompts || []);
+      }
+    } catch (error) {
+      console.error("Failed to save prompt:", error);
+      toast({
+        title: "Failed to save prompt",
+        variant: "destructive",
       });
     }
   };
 
-  const loadPrompt = (savedPrompt: SavedPrompt) => {
+  const loadPrompt = (savedPrompt: Prompt) => {
     onPromptSettingsChange({
-      promptText: savedPrompt.promptText,
-      temperature: savedPrompt.temperature,
+      promptText: savedPrompt.user_prompt || "",
+      temperature: savedPrompt.temperature || 0,
     });
-    setLabel(savedPrompt.label);
-    setInputValue(savedPrompt.label);
-    setPreviousLabel(savedPrompt.label);
+    onLabelChange?.(savedPrompt.label || "");
+    setInputValue(savedPrompt.label || "");
     setIsOpen(false);
     toast({
       title: `Loaded prompt: ${savedPrompt.label}`,
@@ -109,23 +160,19 @@ export const PromptCard = ({
 
   // Get unique labels for the dropdown
   const uniqueLabels = Array.from(
-    new Set(savedPrompts.map((p) => p.label))
+    new Set(savedPrompts.map((p) => p.label).filter(Boolean))
   ).sort();
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && inputValue.trim()) {
-      setLabel(inputValue);
       savePrompt(inputValue);
-      setPreviousLabel(inputValue);
       setIsOpen(false);
     }
   };
 
   const handleLabelBlur = () => {
-    if (inputValue !== previousLabel && inputValue.trim()) {
-      setLabel(inputValue);
+    if (inputValue !== label && inputValue.trim()) {
       savePrompt(inputValue);
-      setPreviousLabel(inputValue);
     }
   };
 
@@ -135,9 +182,8 @@ export const PromptCard = ({
       savePrompt(label);
     }
     // Also check if inputValue changed when prompt blurs
-    if (inputValue !== previousLabel && inputValue.trim()) {
-      setLabel(inputValue);
-      setPreviousLabel(inputValue);
+    if (inputValue !== label && inputValue.trim()) {
+      savePrompt(inputValue);
     }
     onBlur?.();
   };
@@ -222,7 +268,11 @@ export const PromptCard = ({
                         {uniqueLabels.map((savedLabel) => {
                           const latestPrompt = savedPrompts
                             .filter((p) => p.label === savedLabel)
-                            .sort((a, b) => b.timestamp - a.timestamp)[0];
+                            .sort(
+                              (a, b) =>
+                                new Date(b.created_at).getTime() -
+                                new Date(a.created_at).getTime()
+                            )[0];
 
                           return (
                             <CommandItem

@@ -62,6 +62,7 @@ export const RunsTab = () => {
     promptText: "This is the text of the prompt that the user can edit.",
     temperature: 0,
   });
+  const [promptLabel, setPromptLabel] = useState("");
   const [notes, setNotes] = useState("");
   const [output, setOutput] = useState("");
   const [currentRunIndex, setCurrentRunIndex] = useState(0);
@@ -74,6 +75,7 @@ export const RunsTab = () => {
     promptText: "",
     temperature: 0,
   });
+  const [originalPromptLabel, setOriginalPromptLabel] = useState("");
   const [isStarred, setIsStarred] = useState(false);
   const [loading, setLoading] = useState(true);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
@@ -103,6 +105,8 @@ export const RunsTab = () => {
             };
             setPromptSettings(newPromptSettings);
             setOriginalPromptSettings(newPromptSettings);
+            setPromptLabel(prompt.label || "");
+            setOriginalPromptLabel(prompt.label || "");
             setCurrentPromptId(prompt.id);
           }
         }
@@ -148,6 +152,8 @@ export const RunsTab = () => {
           };
           setPromptSettings(newPromptSettings);
           setOriginalPromptSettings(newPromptSettings);
+          setPromptLabel(prompt.label || "");
+          setOriginalPromptLabel(prompt.label || "");
           promptLoaded = true;
         } else {
           setCurrentPromptId(null);
@@ -213,7 +219,8 @@ export const RunsTab = () => {
   const hasPromptChanged = () => {
     return (
       promptSettings.promptText !== originalPromptSettings.promptText ||
-      promptSettings.temperature !== originalPromptSettings.temperature
+      promptSettings.temperature !== originalPromptSettings.temperature ||
+      promptLabel !== originalPromptLabel
     );
   };
 
@@ -226,8 +233,7 @@ export const RunsTab = () => {
         .insert({
           user_prompt: promptSettings.promptText,
           temperature: promptSettings.temperature,
-
-          label: "",
+          label: promptLabel,
         })
         .select()
         .single();
@@ -236,6 +242,7 @@ export const RunsTab = () => {
 
       setCurrentPromptId(newPrompt.id);
       setOriginalPromptSettings(promptSettings);
+      setOriginalPromptLabel(promptLabel);
 
       // Update the current run to point to the new prompt
       if (runs[currentRunIndex]) {
@@ -560,6 +567,9 @@ export const RunsTab = () => {
               promptSettings={promptSettings}
               onPromptSettingsChange={setPromptSettings}
               onBlur={saveNewPromptIfChanged}
+              currentPromptId={currentPromptId}
+              label={promptLabel}
+              onLabelChange={setPromptLabel}
             />
           </ResizablePanel>
           <ResizableHandle />
