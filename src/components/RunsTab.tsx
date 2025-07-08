@@ -334,6 +334,7 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
   };
 
   const handleRun = async () => {
+    setFinishReason(null);
     if (!selectedInputId) {
       toast({
         title: "Please select an input",
@@ -433,6 +434,20 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
       // Start the streaming
       fullResult = await processStreamInBackground();
 
+      // Set finish reason after streaming completes
+      try {
+        const finishReasonValue = await finishReasonPromise;
+        setFinishReason(finishReasonValue);
+      } catch (error) {
+        console.error("Error getting finish reason:", error);
+      }
+
+      if(finishReason !== "stop"){
+        if(finishReason === "length") {
+          throw new Error(`Ran out of tokens before finishing (max tokens reached)`);
+        }
+        throw new Error(`Streaming finished with reason: ${finishReason}`);
+      }
       // Only save to database if not aborted
       if (!controller.signal.aborted) {
         // Create new run with the complete result
@@ -461,7 +476,7 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
       if (error.name !== "AbortError" && error.message !== "Stream aborted") {
         console.error("Error running prompt:", error);
         toast({
-          title: "Error running prompt",
+          title: "Error running prompt: " + error.message,
           variant: "destructive",
         });
       } else {
@@ -622,8 +637,7 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
               onModelChange={setSelectedModel}
               onComparisonModeChange={setComparisonMode}
               onCopyOutput={copyOutput}
-              streamResult={{ ...promptParams,
-                finishReason }}
+              streamResult={{ promptParams, finishReason }}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

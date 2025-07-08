@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { Play, Copy, Square, Info } from "lucide-react";
+import { Play, Copy, Square, Info, AlertTriangle } from "lucide-react";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
@@ -33,7 +33,9 @@ interface OutputSectionProps {
   hasReferenceMarkdown: boolean;
   currentInput: string;
   referenceMarkdown: string;
-  streamResult: unknown | null;
+  streamResult: null | {
+    promptParams: unknown;
+    finishReason: string;}
   onRun: () => void;
   onStop?: () => void;
   onModelChange: (value: string) => void;
@@ -134,7 +136,12 @@ export const OutputSection = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="sm" variant="ghost">
-                    <Info className="h-4 w-4" />
+                    {/* if finishReason is not "stop", show an error icon instead of the info icon. */}
+                    {streamResult.finishReason && streamResult.finishReason !== "stop" ? (
+                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                    ) : (
+                      <Info className="h-4 w-4" />
+                    )}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-md max-h-64 overflow-auto">

@@ -50,6 +50,7 @@ function getMessages(
   return messages;
 }
 function getMaxTokens(markdown: string): number {
+
   // Let's set the maxTokens to at least the length of the markdown content
   // because we're typically working on minority languages so can expect poor tokenization.
   const tokensForInputMarkdown = markdown.length;
@@ -109,6 +110,8 @@ export async function runPromptStream(
   return {
     textStream: result.textStream,
     promptParams: {
+      inputLength: markdown.length,
+      promptLength: llmPrompt.length,
       maxTokens: getMaxTokens(markdown),
     },
     finishReasonPromise: result.finishReason,
