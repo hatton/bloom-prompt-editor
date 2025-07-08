@@ -7,6 +7,7 @@ import {
 } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
+
 interface OpenRouterModel {
   id: string;
   name: string;
@@ -30,21 +31,7 @@ export async function getModels(): Promise<OpenRouterModel[]> {
     return [];
   }
 }
-
-export async function runPrompt(
-  llmPrompt: string,
-  markdown: string,
-  modelId: string,
-  apiKey: string,
-  temperature: number = 0.0
-) {
-  const openrouterProvider = createOpenRouter({
-    apiKey: apiKey,
-  });
-
-  // let's set the maxTokens to at least the length of the markdown content
-  // because we're typically working on minority languages so can expect poor tokenization.
-  const maxTokens = markdown.length + 2000; // Adding a buffer of 2000 tokens for metadata and new tagging
+function getMessages(llmPrompt: string, markdown: string): Array<CoreUserMessage | CoreSystemMessage> {
   const messages: Array<CoreUserMessage | CoreSystemMessage> = [
     {
       role: "system",
@@ -57,12 +44,36 @@ export async function runPrompt(
     content: `Here is the Markdown content:\n\n${markdown}`,
   });
 
+  return messages;
+}
+function getMaxTokens(markdown: string): number {
+  // Let's set the maxTokens to at least the length of the markdown content
+  // because we're typically working on minority languages so can expect poor tokenization.
+  const tokensForInputMarkdown = markdown.length;
+  const kMultiplierForAnnotations = 0.2;
+  const kMysteryOverhead = 2000;
+  const maxTokens = tokensForInputMarkdown + (markdown.length * kMultiplierForAnnotations) + kMysteryOverhead;
+  return maxTokens;
+}
+
+export async function runPrompt(
+  llmPrompt: string,
+  markdown: string,
+  modelId: string,
+  apiKey: string,
+  temperature: number = 0.0
+) {
+  const openrouterProvider = createOpenRouter({
+    apiKey: apiKey,
+  });
+
+
   // Call the AI model to enrich the markdown
   const generateOptions = {
     model: openrouterProvider(modelId),
-    messages,
+    getMessages: getMessages(llmPrompt, markdown),
     temperature,
-    maxTokens,
+    maxTokens: getMaxTokens(markdown),
   };
 
   const result = await generateText(generateOptions);
@@ -99,7 +110,7 @@ export async function runPromptStream(
   // Call the AI model to stream the response
   const result = await streamText({
     model: openrouterProvider(modelId),
-    messages,
+    messages: getMessages(llmPrompt, markdown),
     temperature,
     maxTokens,
     abortSignal,
