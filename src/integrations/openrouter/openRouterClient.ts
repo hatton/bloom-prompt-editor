@@ -54,7 +54,7 @@ function getMaxTokens(markdown: string): number {
   // Let's set the maxTokens to at least the length of the markdown content
   // because we're typically working on minority languages so can expect poor tokenization.
   const tokensForInputMarkdown = markdown.length;
-  const kMultiplierForAnnotations = 0.2;
+  const kMultiplierForAnnotations = 3; // todo: at the moment 1,411 input tokens are leading to 3,848 output tokens
   const kMysteryOverhead = 2000;
   const maxTokens =
     tokensForInputMarkdown +
@@ -115,5 +115,6 @@ export async function runPromptStream(
       maxTokens: getMaxTokens(markdown),
     },
     finishReasonPromise: result.finishReason,
+    usagePromise: result.usage,
   };
 }

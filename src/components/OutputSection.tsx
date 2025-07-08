@@ -33,8 +33,9 @@ interface OutputSectionProps {
   hasReferenceMarkdown: boolean;
   currentInput: string;
   referenceMarkdown: string;
-  streamResult: null | {
+  promptResult: null | {
     promptParams: unknown;
+    tokensUsed: number;
     finishReason: string;}
   onRun: () => void;
   onStop?: () => void;
@@ -52,7 +53,7 @@ export const OutputSection = ({
   hasReferenceMarkdown,
   currentInput,
   referenceMarkdown,
-  streamResult,
+  promptResult: streamResult,
   onRun,
   onStop,
   onModelChange,

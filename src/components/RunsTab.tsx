@@ -377,7 +377,7 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
       }
 
       // Get the stream with abort signal
-      const { textStream, promptParams, finishReasonPromise } = await runPromptStream(
+      const { textStream, promptParams, finishReasonPromise, usagePromise } = await runPromptStream(
         promptSettings.promptText,
         selectedInput.ocr_markdown || "",
         selectedModel,
@@ -637,7 +637,9 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
               onModelChange={setSelectedModel}
               onComparisonModeChange={setComparisonMode}
               onCopyOutput={copyOutput}
-              streamResult={{ promptParams, finishReason }}
+              promptResult={{ promptParams, finishReason,
+                tokensUsed: 0 // todo
+               }}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
