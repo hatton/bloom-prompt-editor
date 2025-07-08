@@ -56,6 +56,8 @@ export const RunsTab = () => {
     "input"
   );
   const [openRouterApiKey] = useLocalStorage<string>("openRouterApiKey", "");
+const [promptParams, setPromptParams] = useState({});
+const [finishReason, setFinishReason] = useState<string | null>(null);
 
   // Other state
   const [promptSettings, setPromptSettings] = useState({
@@ -374,7 +376,7 @@ export const RunsTab = () => {
       }
 
       // Get the stream with abort signal
-      const textStream = await runPromptStream(
+      const { textStream, promptParams, finishReasonPromise } = await runPromptStream(
         promptSettings.promptText,
         selectedInput.ocr_markdown || "",
         selectedModel,
@@ -382,7 +384,7 @@ export const RunsTab = () => {
         promptSettings.temperature,
         controller.signal
       );
-
+      setPromptParams(promptParams);
       let fullResult = "";
 
       // Process stream with abort support
@@ -481,20 +483,6 @@ export const RunsTab = () => {
     }
   };
 
-  const navigateRun = async (direction: "previous" | "next") => {
-    // Save prompt if changed before navigating
-    if (hasPromptChanged()) {
-      await saveNewPromptIfChanged();
-    }
-
-    const newIndex =
-      direction === "previous" ? currentRunIndex - 1 : currentRunIndex + 1;
-
-    if (newIndex >= 0 && newIndex < runs.length) {
-      setCurrentRunIndex(newIndex);
-      await loadRun(runs[newIndex]);
-    }
-  };
 
   const copyOutput = async () => {
     try {
@@ -634,6 +622,8 @@ export const RunsTab = () => {
               onModelChange={setSelectedModel}
               onComparisonModeChange={setComparisonMode}
               onCopyOutput={copyOutput}
+              streamResult={{ ...promptParams,
+                finishReason }}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

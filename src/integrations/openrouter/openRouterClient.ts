@@ -6,7 +6,7 @@ import {
   CoreSystemMessage,
 } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-
+import { max } from "date-fns";
 
 interface OpenRouterModel {
   id: string;
@@ -31,7 +31,10 @@ export async function getModels(): Promise<OpenRouterModel[]> {
     return [];
   }
 }
-function getMessages(llmPrompt: string, markdown: string): Array<CoreUserMessage | CoreSystemMessage> {
+function getMessages(
+  llmPrompt: string,
+  markdown: string
+): Array<CoreUserMessage | CoreSystemMessage> {
   const messages: Array<CoreUserMessage | CoreSystemMessage> = [
     {
       role: "system",
@@ -52,8 +55,11 @@ function getMaxTokens(markdown: string): number {
   const tokensForInputMarkdown = markdown.length;
   const kMultiplierForAnnotations = 0.2;
   const kMysteryOverhead = 2000;
-  const maxTokens = tokensForInputMarkdown + (markdown.length * kMultiplierForAnnotations) + kMysteryOverhead;
-  return maxTokens;
+  const maxTokens =
+    tokensForInputMarkdown +
+    markdown.length * kMultiplierForAnnotations +
+    kMysteryOverhead;
+  return Math.round(maxTokens);
 }
 
 export async function runPrompt(
@@ -66,7 +72,6 @@ export async function runPrompt(
   const openrouterProvider = createOpenRouter({
     apiKey: apiKey,
   });
-
 
   // Call the AI model to enrich the markdown
   const generateOptions = {
@@ -92,29 +97,20 @@ export async function runPromptStream(
     apiKey: apiKey,
   });
 
-  // let's set the maxTokens to at least the length of the markdown content
-  // because we're typically working on minority languages so can expect poor tokenization.
-  const maxTokens = markdown.length + 2000; // Adding a buffer of 2000 tokens for metadata and new tagging
-  const messages: Array<CoreUserMessage | CoreSystemMessage> = [
-    {
-      role: "system",
-      content: llmPrompt,
-    },
-  ];
-
-  messages.push({
-    role: "user",
-    content: `Here is the Markdown content:\n\n${markdown}`,
-  });
-
   // Call the AI model to stream the response
   const result = await streamText({
     model: openrouterProvider(modelId),
     messages: getMessages(llmPrompt, markdown),
     temperature,
-    maxTokens,
+    maxTokens: getMaxTokens(markdown),
     abortSignal,
   });
 
-  return result.textStream;
+  return {
+    textStream: result.textStream,
+    promptParams: {
+      maxTokens: getMaxTokens(markdown),
+    },
+    finishReasonPromise: result.finishReason,
+  };
 }

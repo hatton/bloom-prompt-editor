@@ -18,7 +18,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { AsyncRunInfo } from "@/integrations/openrouter/openRouterClient";
 
 interface OpenRouterModel {
   id: string;
@@ -34,7 +33,7 @@ interface OutputSectionProps {
   hasReferenceMarkdown: boolean;
   currentInput: string;
   referenceMarkdown: string;
-  streamResult: AsyncRunInfo | null;
+  streamResult: unknown | null;
   onRun: () => void;
   onStop?: () => void;
   onModelChange: (value: string) => void;
@@ -140,10 +139,7 @@ export const OutputSection = ({
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-md max-h-64 overflow-auto">
                   <pre className="text-xs whitespace-pre-wrap">
-                    {JSON.stringify({
-                      ...streamResult,
-                      textStream: "[ReadableStream]" // Replace non-serializable stream
-                    }, null, 2)}
+                    {streamResult && JSON.stringify(streamResult, null, 2)}
                   </pre>
                 </TooltipContent>
               </Tooltip>
