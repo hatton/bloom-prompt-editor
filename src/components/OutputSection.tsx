@@ -9,9 +9,16 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { Play, Copy, Square } from "lucide-react";
+import { Play, Copy, Square, Info } from "lucide-react";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { AsyncRunInfo } from "@/integrations/openrouter/openRouterClient";
 
 interface OpenRouterModel {
   id: string;
@@ -27,6 +34,7 @@ interface OutputSectionProps {
   hasReferenceMarkdown: boolean;
   currentInput: string;
   referenceMarkdown: string;
+  streamResult: AsyncRunInfo | null;
   onRun: () => void;
   onStop?: () => void;
   onModelChange: (value: string) => void;
@@ -43,6 +51,7 @@ export const OutputSection = ({
   hasReferenceMarkdown,
   currentInput,
   referenceMarkdown,
+  streamResult,
   onRun,
   onStop,
   onModelChange,
@@ -120,9 +129,30 @@ export const OutputSection = ({
             </>
           )}
         </div>
-        <Button onClick={onCopyOutput} size="sm" variant="ghost">
-          <Copy className="h-4 w-4 mr-2" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {streamResult && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="ghost">
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-md max-h-64 overflow-auto">
+                  <pre className="text-xs whitespace-pre-wrap">
+                    {JSON.stringify({
+                      ...streamResult,
+                      textStream: "[ReadableStream]" // Replace non-serializable stream
+                    }, null, 2)}
+                  </pre>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <Button onClick={onCopyOutput} size="sm" variant="ghost">
+            <Copy className="h-4 w-4 mr-2" />
+          </Button>
+        </div>
       </div>
       <Card className="flex-1 w-full min-h-0">
         <MarkdownViewer
