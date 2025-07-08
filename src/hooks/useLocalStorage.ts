@@ -23,64 +23,16 @@ export function useLocalStorage<T>(
         return defaultValue;
       }
 
-      // Handle different types appropriately with validation
-      if (typeof defaultValue === "string") {
-        return item as T;
-      }
-
-      if (typeof defaultValue === "number") {
-        const parsed = parseFloat(item);
-        if (isNaN(parsed) || !isFinite(parsed)) {
-          console.warn(
-            `Invalid number stored in localStorage for key "${key}": ${item}`
-          );
-          return defaultValue;
-        }
-        return parsed as T;
-      }
-
-      if (typeof defaultValue === "boolean") {
-        if (item === "true") return true as T;
-        if (item === "false") return false as T;
-        // Handle legacy boolean values that might be stored as 1/0
-        if (item === "1") return true as T;
-        if (item === "0") return false as T;
+      // Attempt to parse the value based on the generic type T
+      try {
+        return JSON.parse(item) as T;
+      } catch {
+        // If parsing fails, fallback to defaultValue
         console.warn(
-          `Invalid boolean stored in localStorage for key "${key}": ${item}`
+          `Failed to parse localStorage value for key "${key}". Falling back to defaultValue.`
         );
         return defaultValue;
       }
-
-      // For objects/arrays, parse JSON with validation
-      if (typeof defaultValue === "object") {
-        try {
-          const parsed = JSON.parse(item);
-          // Basic type validation - ensure parsed result matches expected type structure
-          if (Array.isArray(defaultValue) && !Array.isArray(parsed)) {
-            console.warn(
-              `Expected array but got different type for localStorage key "${key}"`
-            );
-            return defaultValue;
-          }
-          if (!Array.isArray(defaultValue) && typeof parsed !== "object") {
-            console.warn(
-              `Expected object but got different type for localStorage key "${key}"`
-            );
-            return defaultValue;
-          }
-          return parsed as T;
-        } catch (parseError) {
-          console.warn(
-            `Invalid JSON stored in localStorage for key "${key}":`,
-            parseError
-          );
-          return defaultValue;
-        }
-      }
-
-      // Fallback for unknown types
-      console.warn(`Unsupported type for localStorage key "${key}"`);
-      return defaultValue;
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
       return defaultValue;
@@ -103,21 +55,7 @@ export function useLocalStorage<T>(
 
       if (value === null || value === undefined) {
         localStorage.removeItem(key);
-      } else if (
-        typeof value === "string" ||
-        typeof value === "number" ||
-        typeof value === "boolean"
-      ) {
-        // Additional validation for primitive types
-        if (typeof value === "number" && (!isFinite(value) || isNaN(value))) {
-          console.warn(
-            `Cannot store invalid number in localStorage for key "${key}":`,
-            value
-          );
-          return;
-        }
-        localStorage.setItem(key, String(value));
-      } else if (typeof value === "object") {
+      } else {
         try {
           const jsonString = JSON.stringify(value);
           localStorage.setItem(key, jsonString);
@@ -127,11 +65,6 @@ export function useLocalStorage<T>(
             stringifyError
           );
         }
-      } else {
-        console.warn(
-          `Unsupported value type for localStorage key "${key}":`,
-          typeof value
-        );
       }
     } catch (error) {
       // Handle quota exceeded errors and other localStorage errors
