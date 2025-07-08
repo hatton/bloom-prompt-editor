@@ -27,6 +27,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
+import { LanguageModelUsage } from "ai";
 
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
@@ -58,6 +59,7 @@ export const RunsTab = () => {
   const [openRouterApiKey] = useLocalStorage<string>("openRouterApiKey", "");
 const [promptParams, setPromptParams] = useState({});
 const [finishReason, setFinishReason] = useState<string | null>(null);
+const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
 
   // Other state
   const [promptSettings, setPromptSettings] = useState({
@@ -438,11 +440,12 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
       try {
         const finishReasonValue = await finishReasonPromise;
         setFinishReason(finishReasonValue);
+        setUsage(await usagePromise);
       } catch (error) {
         console.error("Error getting finish reason:", error);
       }
 
-      if(finishReason !== "stop"){
+      if(finishReason && finishReason !== "stop"){
         if(finishReason === "length") {
           throw new Error(`Ran out of tokens before finishing (max tokens reached)`);
         }
@@ -637,8 +640,8 @@ const [finishReason, setFinishReason] = useState<string | null>(null);
               onModelChange={setSelectedModel}
               onComparisonModeChange={setComparisonMode}
               onCopyOutput={copyOutput}
-              promptResult={{ promptParams, finishReason,
-                tokensUsed: 0 // todo
+              promptResult={{ promptParams, finishReason, usage, outputLength: output.length
+          
                }}
             />
           </ResizablePanel>

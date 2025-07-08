@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LanguageModelUsage } from "ai";
 
 interface OpenRouterModel {
   id: string;
@@ -35,7 +36,8 @@ interface OutputSectionProps {
   referenceMarkdown: string;
   promptResult: null | {
     promptParams: unknown;
-    tokensUsed: number;
+    usage: LanguageModelUsage | null;
+    outputLength: number;
     finishReason: string;}
   onRun: () => void;
   onStop?: () => void;
@@ -53,7 +55,7 @@ export const OutputSection = ({
   hasReferenceMarkdown,
   currentInput,
   referenceMarkdown,
-  promptResult: streamResult,
+  promptResult,
   onRun,
   onStop,
   onModelChange,
@@ -132,13 +134,13 @@ export const OutputSection = ({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {streamResult && (
+          {promptResult && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="sm" variant="ghost">
                     {/* if finishReason is not "stop", show an error icon instead of the info icon. */}
-                    {streamResult.finishReason && streamResult.finishReason !== "stop" ? (
+                    {promptResult.finishReason && promptResult.finishReason !== "stop" ? (
                       <AlertTriangle className="h-4 w-4 text-red-500" />
                     ) : (
                       <Info className="h-4 w-4" />
@@ -147,7 +149,7 @@ export const OutputSection = ({
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-md max-h-64 overflow-auto">
                   <pre className="text-xs whitespace-pre-wrap">
-                    {streamResult && JSON.stringify(streamResult, null, 2)}
+                    {promptResult && JSON.stringify({finishReason:promptResult.finishReason,inputs:promptResult.promptParams,usage:promptResult.usage, outputLength: promptResult.outputLength}, null, 2).replace(/"/g, "")}
                   </pre>
                 </TooltipContent>
               </Tooltip>

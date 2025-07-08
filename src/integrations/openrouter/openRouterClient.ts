@@ -50,16 +50,18 @@ function getMessages(
   return messages;
 }
 function getMaxTokens(markdown: string): number {
-
   // Let's set the maxTokens to at least the length of the markdown content
   // because we're typically working on minority languages so can expect poor tokenization.
-  const tokensForInputMarkdown = markdown.length;
-  const kMultiplierForAnnotations = 3; // todo: at the moment 1,411 input tokens are leading to 3,848 output tokens
-  const kMysteryOverhead = 2000;
+
+  const kMultiplierForOutput = 3; // While something like English might be 4:1 letter to token, some other script of an unknown language could be 1 token for each unicode byte?
+  // todo: at the moment 1,411 input tokens are leading to 3,848 output tokens, probably from thinking. Really we don't
+  // want to limit the thinking because if it doesn't finished, we're hosed.
+  const kMultiplierForThinking = 6;
+  const kMultiplierForAnnotations = 1;
   const maxTokens =
-    tokensForInputMarkdown +
-    markdown.length * kMultiplierForAnnotations +
-    kMysteryOverhead;
+    markdown.length *
+    (kMultiplierForOutput + kMultiplierForAnnotations + kMultiplierForThinking);
+
   return Math.round(maxTokens);
 }
 
@@ -110,8 +112,9 @@ export async function runPromptStream(
   return {
     textStream: result.textStream,
     promptParams: {
-      inputLength: markdown.length,
       promptLength: llmPrompt.length,
+      inputLength: markdown.length,
+
       maxTokens: getMaxTokens(markdown),
     },
     finishReasonPromise: result.finishReason,
