@@ -1,7 +1,7 @@
 import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
 import { github } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import markdown from "react-syntax-highlighter/dist/esm/languages/hljs/markdown";
-import ReactDiffViewer from "react-diff-viewer-continued";
+import ReactDiffViewer, { DiffMethod } from "react-diff-viewer-continued";
 import React, { PureComponent } from "react";
 // Register markdown language
 SyntaxHighlighter.registerLanguage("markdown", markdown);
@@ -81,6 +81,7 @@ export class MarkdownDiffViewer extends PureComponent<MarkdownViewerProps> {
           hideMarkers={true}
           showDiffOnly={showDiffOnly}
           extraLinesSurroundingDiff={1}
+          compareMethod={DiffMethod.WORDS}
           {...rest}
         />
       </div>
