@@ -18,10 +18,28 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
 
   // Field definitions that match the FieldSetEditor
   const fieldDefinitions = [
-    { name: "title_l1", label: "Title L1" },
-    { name: "title_l2", label: "Title L2" },
-    { name: "copyright", label: "Copyright" },
-    { name: "license_url", label: "License URL" },
+    { dbFieldName: "title_l1", label: "Title L1" },
+    { dbFieldName: "title_l2", label: "Title L2" },
+    { dbFieldName: "copyright", label: "Copyright" },
+    { dbFieldName: "license_url", markdownFieldName: "licenseUrl", label: "License URL" },
+    { dbFieldName: "isbn", label: "ISBN" },
+    { dbFieldName: "licenseDescription", label: "License Description" },
+    { dbFieldName: "licenseNotes", label: "License Notes" },
+    { dbFieldName: "originalCopyright", label: "Original Copyright" },
+    { dbFieldName: "smallCoverCredits", label: "Small Cover Credits" },
+    { dbFieldName: "topic", label: "Topic" },
+    { dbFieldName: "credits", label: "Credits" },
+    { dbFieldName: "versionAcknowledgments", label: "Version Acknowledgments" },
+    { dbFieldName: "originalContributions", label: "Original Contributions" },
+    { dbFieldName: "originalAcknowledgments", label: "Original Acknowledgments" },
+    { dbFieldName: "funding", label: "Funding" },
+    { dbFieldName: "country", label: "Country" },
+    { dbFieldName: "province", label: "Province" },
+    { dbFieldName: "district", label: "District" },
+    { dbFieldName: "author", label: "Author" },
+    { dbFieldName: "illustrator", label: "Illustrator" },
+    { dbFieldName: "publisher", label: "Publisher" },
+    { dbFieldName: "originalPublisher", label: "Original Publisher" },
   ];
 
   useEffect(() => {
@@ -78,8 +96,8 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
           </TableHeader>
           <TableBody>
             {fieldDefinitions.map((field) => {
-              const correctValue = correctFields?.[field.name as keyof FieldSet] as string || "";
-              const extractedValue = extractField(output, field.name);
+              const correctValue = correctFields?.[field.dbFieldName as keyof FieldSet] as string || "";
+              const extractedValue = extractField(output, field.markdownFieldName || field.dbFieldName);
               
               // Determine row background color based on comparison
               let rowClassName = "";
@@ -92,11 +110,11 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
                 }
               } else if (correctValue && !extractedValue) {
                 // Have correct value but no extracted value
-                rowClassName = "bg-orange-50"; // Light orange for missing extracted value
+                rowClassName = "bg-yellow-50"; // Light orange for missing extracted value
               }
               
               return (
-                <TableRow key={field.name} className={rowClassName}>
+                <TableRow key={field.dbFieldName} className={rowClassName}>
                   <TableCell className="font-medium">{field.label}</TableCell>
                   <TableCell className="max-w-[300px] break-words">
                     {correctValue || <span className="text-muted-foreground italic">No correct value set</span>}
