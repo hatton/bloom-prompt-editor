@@ -85,7 +85,7 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
 
   return (
     
-      <div className="flex-1 overflow-auto bg-white">
+      <div className="flex-1 overflow-hidden bg-white flex flex-col">
         <Table>
           <TableHeader>
             <TableRow>
@@ -94,7 +94,10 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
               <TableHead>This Run</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+        </Table>
+        <div className="flex-1 overflow-auto">
+          <Table>
+            <TableBody>
             {fieldDefinitions.map((field) => {
               const correctValue = correctFields?.[field.dbFieldName as keyof FieldSet] as string || "";
               const extractedValue = extractField(output, field.markdownFieldName || field.dbFieldName);
@@ -126,7 +129,8 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
               );
             })}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
     
   );

@@ -125,13 +125,13 @@ export const OutputSection = ({
           <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>
           
         </TabsList>
-                <TabsContent value="fields" className="flex-1 min-h-0 !mt-0">
+        <TabsContent value="fields" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
           <FieldView 
             output={output}
             currentInputId={selectedInputId}
           />
         </TabsContent>
-        <TabsContent value="diff" className="flex-1 min-h-0 !mt-0 grow flex flex-col">
+        <TabsContent value="diff" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
           <DiffView
             output={output}
             comparisonMode={comparisonMode}
