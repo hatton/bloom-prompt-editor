@@ -16,6 +16,7 @@ export type Database = {
           label: string | null;
           ocr_markdown: string | null;
           reference_markdown: string | null;
+          correct_fields: number | null;
         };
         Insert: {
           created_at?: string;
@@ -23,6 +24,7 @@ export type Database = {
           label?: string | null;
           ocr_markdown?: string | null;
           reference_markdown?: string | null;
+          correct_fields?: number | null;
         };
         Update: {
           created_at?: string;
@@ -30,6 +32,39 @@ export type Database = {
           label?: string | null;
           ocr_markdown?: string | null;
           reference_markdown?: string | null;
+          correct_fields?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "book-input_correct_fields_fkey";
+            columns: ["correct_fields"];
+            isOneToOne: false;
+            referencedRelation: "field-set";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      "field-set": {
+        Row: {
+          copyright: string | null;
+          created_at: string;
+          id: number;
+          title_l1: string | null;
+          title_l2: string | null;
+        };
+        Insert: {
+          copyright?: string | null;
+          created_at?: string;
+          id: number;
+          title_l1?: string | null;
+          title_l2?: string | null;
+        };
+        Update: {
+          copyright?: string | null;
+          created_at?: string;
+          id?: number;
+          title_l1?: string | null;
+          title_l2?: string | null;
         };
         Relationships: [];
       };
@@ -41,7 +76,6 @@ export type Database = {
           notes: string | null;
           user_prompt: string | null;
           temperature: number | null;
-          thinking_token_budget: number | null;
         };
         Insert: {
           created_at?: string;
@@ -50,7 +84,6 @@ export type Database = {
           notes?: string | null;
           user_prompt?: string | null;
           temperature?: number | null;
-          thinking_token_budget?: number | null;
         };
         Update: {
           created_at?: string;
@@ -59,7 +92,6 @@ export type Database = {
           notes?: string | null;
           user_prompt?: string | null;
           temperature?: number | null;
-          thinking_token_budget?: number | null;
         };
         Relationships: [];
       };
@@ -72,6 +104,7 @@ export type Database = {
           notes: string | null;
           output: string | null;
           prompt_id: number | null;
+          discovered_fields: number | null;
         };
         Insert: {
           book_input_id?: number | null;
@@ -81,6 +114,7 @@ export type Database = {
           notes?: string | null;
           output?: string | null;
           prompt_id?: number | null;
+          discovered_fields?: number | null;
         };
         Update: {
           book_input_id?: number | null;
@@ -90,6 +124,7 @@ export type Database = {
           notes?: string | null;
           output?: string | null;
           prompt_id?: number | null;
+          discovered_fields?: number | null;
         };
         Relationships: [
           {
@@ -97,6 +132,13 @@ export type Database = {
             columns: ["book_input_id"];
             isOneToOne: false;
             referencedRelation: "book-input";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "run_discovered_fields_fkey";
+            columns: ["discovered_fields"];
+            isOneToOne: false;
+            referencedRelation: "field-set";
             referencedColumns: ["id"];
           },
           {
