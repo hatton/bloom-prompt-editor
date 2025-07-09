@@ -17,7 +17,7 @@ interface DiffViewProps {
   output: string;
   comparisonMode: string;
   hasReferenceMarkdown: boolean;
-  currentInput: string;
+  markdownOfSelectedInput: string;
   referenceMarkdown: string;
   onComparisonModeChange: (value: string) => void;
   onCopyOutput: () => void;
@@ -27,7 +27,7 @@ export const DiffView = ({
   output,
   comparisonMode,
   hasReferenceMarkdown,
-  currentInput,
+  markdownOfSelectedInput,
   referenceMarkdown,
   onComparisonModeChange,
   onCopyOutput,
@@ -87,7 +87,7 @@ export const DiffView = ({
         <MarkdownViewer
             content={output}
             compareWithText={
-                comparisonMode === "input" ? currentInput : referenceMarkdown
+                comparisonMode === "input" ? markdownOfSelectedInput : referenceMarkdown
             }
             className="h-full"
             splitView={splitView}

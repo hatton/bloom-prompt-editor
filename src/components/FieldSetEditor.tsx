@@ -31,13 +31,13 @@ const fieldDefinitions = [
     name: "copyright" as const,
     label: "Copyright",
     placeholder: "Enter copyright information...",
-    className: "md:col-span-1",
+    className: "md:col-span-2",
   },
   {
     name: "license_url" as const,
     label: "License URL",
     placeholder: "Enter license URL...",
-    className: "md:col-span-1",
+    className: "md:col-span-2",
     type: "url",
   },
 ];
@@ -73,6 +73,8 @@ export const FieldSetEditor = ({
           .single();
 
         if (error) throw error;
+
+        console.log(`Loaded field set data for field-set.id=${fieldSetId}:`, data);
 
         setCurrentFieldSet(data);
         setFieldSetData(data);

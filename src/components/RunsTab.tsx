@@ -551,7 +551,7 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
     );
   }
 
-  const currentInput =
+  const markdownOfSelectedInput =
     bookInputs.find((input) => input.id.toString() === selectedInputId)
       ?.ocr_markdown || "";
 
@@ -610,7 +610,7 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
               </div>
               <div className="flex-1 rounded-md border overflow-auto">
                 <MarkdownViewer
-                  content={currentInput}
+                  content={markdownOfSelectedInput}
                   customStyle={{
                     margin: 0,
                     padding: "12px",
@@ -636,7 +636,8 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
               selectedModel={selectedModel}
               comparisonMode={comparisonMode}
               hasReferenceMarkdown={hasReferenceMarkdown}
-              currentInput={currentInput}
+              selectedInputId={selectedInputId}
+              markdownOfSelectedInput={markdownOfSelectedInput}
               referenceMarkdown={referenceMarkdown}
               onRun={handleRun}
               onStop={handleStop}

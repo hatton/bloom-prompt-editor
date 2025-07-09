@@ -32,7 +32,8 @@ interface OutputSectionProps {
   selectedModel: string;
   comparisonMode: string;
   hasReferenceMarkdown: boolean;
-  currentInput: string;
+  markdownOfSelectedInput: string;
+  selectedInputId: string;
   referenceMarkdown: string;
   promptResult: null | {
     promptParams: unknown;
@@ -53,7 +54,8 @@ export const OutputSection = ({
   selectedModel,
   comparisonMode,
   hasReferenceMarkdown,
-  currentInput,
+  selectedInputId,
+  markdownOfSelectedInput,
   referenceMarkdown,
   promptResult,
   onRun,
@@ -119,23 +121,28 @@ export const OutputSection = ({
       
       <Tabs defaultValue="diff" className="flex-1 flex flex-col min-h-0 grow mt-[15px]">
         <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
-          <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>
           <TabsTrigger value="fields" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Fields</TabsTrigger>
+          <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>
+          
         </TabsList>
+                <TabsContent value="fields" className="flex-1 min-h-0 !mt-0">
+          <FieldView 
+            output={output}
+            currentInputId={selectedInputId}
+          />
+        </TabsContent>
         <TabsContent value="diff" className="flex-1 min-h-0 !mt-0 grow flex flex-col">
           <DiffView
             output={output}
             comparisonMode={comparisonMode}
             hasReferenceMarkdown={hasReferenceMarkdown}
-            currentInput={currentInput}
+            markdownOfSelectedInput={markdownOfSelectedInput}
             referenceMarkdown={referenceMarkdown}
             onComparisonModeChange={onComparisonModeChange}
             onCopyOutput={onCopyOutput}
           />
         </TabsContent>
-        <TabsContent value="fields" className="flex-1 min-h-0 !mt-0">
-          <FieldView />
-        </TabsContent>
+
       </Tabs></Card>
     </div>
   );
