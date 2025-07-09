@@ -14,33 +14,42 @@ interface FieldSetEditorProps {
   onFieldSetUpdate: (fieldSetId: number) => void;
 }
 
-const fieldDefinitions = [
-  {
-    name: "title_l1" as const,
-    label: "Title L1",
-    placeholder: "Enter title L1...",
-    className: "",
-  },
-  {
-    name: "title_l2" as const,
-    label: "Title L2",
-    placeholder: "Enter title L2...",
-    className: "",
-  },
-  {
-    name: "copyright" as const,
-    label: "Copyright",
-    placeholder: "Enter copyright information...",
-    className: "md:col-span-2",
-  },
-  {
-    name: "license_url" as const,
-    label: "License URL",
-    placeholder: "Enter license URL...",
-    className: "md:col-span-2",
-    type: "url",
-  },
-];
+// Generate field definitions from the database types, excluding system fields
+const getFieldDefinitions = () => {
+  // Extract field names from the FieldSet type (excluding system fields)
+  const fieldNames: (keyof Omit<FieldSet, 'id' | 'created_at'>)[] = [
+    'copyright',
+    'title_l1', 
+    'title_l2',
+    'license_url',
+    'isbn',
+    'licenseDescription',
+    'licenseNotes',
+    'originalCopyright',
+    'smallCoverCredits',
+    'topic',
+    'credits',
+    'versionAcknowledgments',
+    'originalContributions',
+    'originalAcknowledgments',
+    'funding',
+    'country',
+    'province',
+    'district',
+    'author',
+    'illustrator',
+    'publisher',
+    'originalPublisher'
+  ];
+  
+  return fieldNames.map(field => ({
+    name: field,
+    label: field.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    type: field === 'license_url' ? 'url' : 'text'
+  }));
+};
+
+const fieldDefinitions = getFieldDefinitions();
 
 export const FieldSetEditor = ({
   selectedInputId,
@@ -181,16 +190,15 @@ export const FieldSetEditor = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {fieldDefinitions.map((field) => (
-          <div key={field.name} className={field.className}>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div key={field.name} className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700 min-w-0 flex-shrink-0 w-32">
               {field.label}
             </label>
             <Input
               value={(fieldSetData[field.name] as string) || ""}
               onChange={(e) => handleFieldChange(field.name, e.target.value)}
-              placeholder={field.placeholder}
-              className="w-full"
-              type={field.type || "text"}
+              className="flex-1"
+              type={field.type}
             />
           </div>
         ))}

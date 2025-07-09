@@ -69,6 +69,8 @@ export const OutputSection = ({
   onComparisonModeChange,
   onCopyOutput,
 }: OutputSectionProps) => {
+  const [activeTab, setActiveTab] = useState("diff");
+
   const formatRunDate = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleString(undefined, {
@@ -80,13 +82,18 @@ export const OutputSection = ({
       second: '2-digit',
     });
   };
+
+  const handleRun = () => {
+    setActiveTab("diff"); // Switch to Markdown tab when Run is clicked
+    onRun();
+  };
   return (
     <div className="flex flex-col h-full grow gap-4">
       <Card className="p-4 flex flex-col flex-1 grow" style={{ backgroundColor: "#c5dcff", maxHeight: "100%" }}>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="flex items-center space-x-2">
-              <Button onClick={onRun} disabled={isRunning}>
+              <Button onClick={handleRun} disabled={isRunning}>
                 <Play className="h-4 w-4 mr-2" />
                 {isRunning ? "Running..." : "Run"}
               </Button>
@@ -145,7 +152,7 @@ export const OutputSection = ({
             <p className="text-lg text-gray-500">Waiting for Run</p>
           </div>
         ) : (
-          <Tabs defaultValue="diff" className="flex-1 flex flex-col min-h-0 grow mt-[15px]">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 grow mt-[15px]">
             <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
               <TabsTrigger value="fields" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Fields</TabsTrigger>
               <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>

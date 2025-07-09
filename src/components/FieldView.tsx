@@ -120,10 +120,10 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
                 <TableRow key={field.dbFieldName} className={rowClassName}>
                   <TableCell className="font-medium">{field.label}</TableCell>
                   <TableCell className="max-w-[300px] break-words">
-                    {correctValue || <span className="text-muted-foreground italic">No correct value set</span>}
+                    {correctValue || <span className="text-muted-foreground italic"></span>}
                   </TableCell>
                   <TableCell className="max-w-[300px] break-words">
-                    {extractedValue || <span className="text-muted-foreground italic">Not found in output</span>}
+                    {extractedValue || <span className="text-muted-foreground italic"></span>}
                   </TableCell>
                 </TableRow>
               );
