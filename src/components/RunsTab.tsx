@@ -497,6 +497,9 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
   const handleStop = () => {
     if (abortController) {
       abortController.abort();
+      // Immediately reset UI state when stopping
+      setIsRunning(false);
+      setAbortController(null);
       // Note: The toast will be shown in the catch block of handleRun
     }
   };
