@@ -51,13 +51,15 @@ export type Database = {
           id: number;
           title_l1: string | null;
           title_l2: string | null;
+          license_url: string | null;
         };
         Insert: {
           copyright?: string | null;
           created_at?: string;
-          id: number;
+          id?: number;
           title_l1?: string | null;
           title_l2?: string | null;
+          license_url?: string | null;
         };
         Update: {
           copyright?: string | null;
@@ -65,6 +67,7 @@ export type Database = {
           id?: number;
           title_l1?: string | null;
           title_l2?: string | null;
+          license_url?: string | null;
         };
         Relationships: [];
       };

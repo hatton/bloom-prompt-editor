@@ -8,6 +8,7 @@ import { Plus, Trash2, Clipboard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { FieldSetEditor } from "@/components/FieldSetEditor";
 
 type BookInput = Tables<"book-input">;
 
@@ -184,6 +185,17 @@ export const InputBooksTab = () => {
   const handleReferenceMarkdownChange = (value: string) => {
     setCurrentReferenceMarkdown(value);
     setHasUnsavedChanges(true);
+  };
+
+  // Handle field set updates from the FieldSetEditor component
+  const handleFieldSetUpdate = (fieldSetId: number) => {
+    setBookInputs((prev) =>
+      prev.map((input) =>
+        input.id === selectedInputId
+          ? { ...input, correct_fields: fieldSetId }
+          : input
+      )
+    );
   };
 
   // Individual save functions for each field
@@ -511,9 +523,9 @@ export const InputBooksTab = () => {
               </div>
             </div>
 
-            <div className="flex-1 p-6 flex flex-col gap-6">
+            <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
               {/* OCR Markdown Section */}
-              <div className="flex-1 flex flex-col">
+              <div className="flex flex-col min-h-[200px]">
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
                     OCR Markdown
@@ -555,7 +567,7 @@ export const InputBooksTab = () => {
               </div>
 
               {/* Reference Markdown Section */}
-              <div className="flex-1 flex flex-col">
+              <div className="flex flex-col min-h-[200px]">
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
                     Optional Reference Markdown (i.e. the "correct" answer)
@@ -601,6 +613,13 @@ export const InputBooksTab = () => {
                   )}
                 </div>
               </div>
+
+              {/* Field Set Section */}
+              <FieldSetEditor
+                selectedInputId={selectedInputId}
+                fieldSetId={selectedInput?.correct_fields || null}
+                onFieldSetUpdate={handleFieldSetUpdate}
+              />
             </div>
           </div>
         ) : (
