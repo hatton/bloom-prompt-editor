@@ -162,6 +162,8 @@ export type Database = {
           output: string | null;
           prompt_id: number | null;
           discovered_fields: number | null;
+          model: string | null;
+          temperature: number | null;
         };
         Insert: {
           book_input_id?: number | null;
@@ -172,6 +174,8 @@ export type Database = {
           output?: string | null;
           prompt_id?: number | null;
           discovered_fields?: number | null;
+          model?: string | null;
+          temperature?: number | null;
         };
         Update: {
           book_input_id?: number | null;
@@ -182,6 +186,8 @@ export type Database = {
           output?: string | null;
           prompt_id?: number | null;
           discovered_fields?: number | null;
+          model?: string | null;
+          temperature?: number | null;
         };
         Relationships: [
           {
