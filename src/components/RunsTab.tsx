@@ -84,6 +84,7 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [models, setModels] = useState<OpenRouterModel[]>([]);
   const { toast } = useToast();
+  const [waitingForRun, setWaitingForRun] = useState(false);
 
   const loadRun = useCallback(
     async (run: Run) => {
@@ -92,6 +93,9 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
         setOutput(run.output || "");
         setSelectedInputId(run.book_input_id?.toString() || "");
         setIsStarred(run.human_tags?.includes("star") || false);
+        setPromptParams({}); // TODO: Should we store and load these?
+        setFinishReason(null); // TODO: Should we store and load these?
+        setUsage(null); // TODO: Should we store and load these?
 
         // Load the prompt for this run
         if (run.prompt_id) {
@@ -120,6 +124,71 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
     },
     [setSelectedInputId, setCurrentPromptId]
   );
+
+  useEffect(() => {
+    const findAndLoadRun = async () => {
+      if (!selectedInputId || !currentPromptId) {
+        setOutput("");
+        setNotes("");
+        setPromptParams({});
+        setFinishReason(null);
+        setUsage(null);
+        setIsStarred(false);
+        setWaitingForRun(false);
+        return;
+      }
+
+      try {
+        const { data: run, error } = await supabase
+          .from("run")
+          .select("*")
+          .eq("prompt_id", currentPromptId)
+          .eq("book_input_id", parseInt(selectedInputId, 10))
+          .eq("temperature", promptSettings.temperature)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== "PGRST116") {
+          // PGRST116 means no rows found, which is not an error in this case.
+          throw error;
+        }
+
+        if (run) {
+          await loadRun(run);
+          const runIndex = runs.findIndex((r) => r.id === run.id);
+          if (runIndex !== -1) {
+            setCurrentRunIndex(runIndex);
+          }
+          setWaitingForRun(false);
+        } else {
+          // No run found, clear the output
+          setOutput("");
+          setNotes("");
+          setPromptParams({});
+          setFinishReason(null);
+          setUsage(null);
+          setIsStarred(false);
+          setWaitingForRun(true);
+        }
+      } catch (error) {
+        console.error("Error finding matching run:", error);
+        toast({
+          title: "Error searching for a matching run",
+          variant: "destructive",
+        });
+      }
+    };
+
+    findAndLoadRun();
+  }, [
+    selectedInputId,
+    currentPromptId,
+    promptSettings.temperature,
+    runs,
+    loadRun,
+    toast,
+  ]);
 
   const loadInitialData = useCallback(async () => {
     try {
@@ -336,6 +405,7 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
   };
 
   const handleRun = async () => {
+    setWaitingForRun(false);
     setFinishReason(null);
     if (!selectedInputId) {
       toast({
@@ -460,6 +530,8 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
             prompt_id: promptId,
             book_input_id: parseInt(selectedInputId),
             output: fullResult,
+            temperature: promptSettings.temperature,
+            model: selectedModel,
             notes: notes,
           })
           .select()
@@ -644,9 +716,14 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
               onModelChange={setSelectedModel}
               onComparisonModeChange={setComparisonMode}
               onCopyOutput={copyOutput}
-              promptResult={{ promptParams, finishReason, usage, outputLength: output.length
-          
-               }}
+              waitingForRun={waitingForRun}
+              runTimestamp={runs[currentRunIndex]?.created_at}
+              promptResult={{
+                promptParams,
+                finishReason,
+                usage,
+                outputLength: output.length,
+              }}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

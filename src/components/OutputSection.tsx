@@ -39,7 +39,10 @@ interface OutputSectionProps {
     promptParams: unknown;
     usage: LanguageModelUsage | null;
     outputLength: number;
-    finishReason: string;}
+    finishReason: string;
+  };
+  waitingForRun: boolean;
+  runTimestamp?: string;
   onRun: () => void;
   onStop?: () => void;
   onModelChange: (value: string) => void;
@@ -58,12 +61,25 @@ export const OutputSection = ({
   markdownOfSelectedInput,
   referenceMarkdown,
   promptResult,
+  waitingForRun,
+  runTimestamp,
   onRun,
   onStop,
   onModelChange,
   onComparisonModeChange,
   onCopyOutput,
 }: OutputSectionProps) => {
+  const formatRunDate = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  };
   return (
     <div className="flex flex-col h-full grow gap-4">
       <Card className="p-4 flex flex-col flex-1 grow" style={{ backgroundColor: "#c5dcff", maxHeight: "100%" }}>
@@ -93,6 +109,11 @@ export const OutputSection = ({
                 ))}
               </SelectContent>
             </Select>
+            {runTimestamp && (
+              <span className="text-sm text-gray-600 ml-4">
+                {formatRunDate(runTimestamp)}
+              </span>
+            )}
           </div>
             <div className="flex items-center gap-2 flex-grow">
             {promptResult && (
@@ -118,32 +139,37 @@ export const OutputSection = ({
             )}
           </div>
         </div>
-      
-      <Tabs defaultValue="diff" className="flex-1 flex flex-col min-h-0 grow mt-[15px]">
-        <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
-          <TabsTrigger value="fields" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Fields</TabsTrigger>
-          <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>
-          
-        </TabsList>
-        <TabsContent value="fields" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
-          <FieldView 
-            output={output}
-            currentInputId={selectedInputId}
-          />
-        </TabsContent>
-        <TabsContent value="diff" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
-          <DiffView
-            output={output}
-            comparisonMode={comparisonMode}
-            hasReferenceMarkdown={hasReferenceMarkdown}
-            markdownOfSelectedInput={markdownOfSelectedInput}
-            referenceMarkdown={referenceMarkdown}
-            onComparisonModeChange={onComparisonModeChange}
-            onCopyOutput={onCopyOutput}
-          />
-        </TabsContent>
 
-      </Tabs></Card>
+        {waitingForRun ? (
+          <div className="flex-1 flex items-center justify-center">
+            <p className="text-lg text-gray-500">Waiting for Run</p>
+          </div>
+        ) : (
+          <Tabs defaultValue="diff" className="flex-1 flex flex-col min-h-0 grow mt-[15px]">
+            <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
+              <TabsTrigger value="fields" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Fields</TabsTrigger>
+              <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>
+            </TabsList>
+            <TabsContent value="fields" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
+              <FieldView 
+                output={output}
+                currentInputId={selectedInputId}
+              />
+            </TabsContent>
+            <TabsContent value="diff" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
+              <DiffView
+                output={output}
+                comparisonMode={comparisonMode}
+                hasReferenceMarkdown={hasReferenceMarkdown}
+                markdownOfSelectedInput={markdownOfSelectedInput}
+                referenceMarkdown={referenceMarkdown}
+                onComparisonModeChange={onComparisonModeChange}
+                onCopyOutput={onCopyOutput}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
+      </Card>
     </div>
   );
 };
