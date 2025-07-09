@@ -7,11 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import { Play, Copy, Square, Info, AlertTriangle } from "lucide-react";
-import { MarkdownViewer } from "@/components/MarkdownViewer";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Play, Square, Info, AlertTriangle } from "lucide-react";
+import { DiffView } from "@/components/DiffView";
+import { FieldView } from "@/components/FieldView";
 import {
   Tooltip,
   TooltipContent,
@@ -62,115 +62,81 @@ export const OutputSection = ({
   onComparisonModeChange,
   onCopyOutput,
 }: OutputSectionProps) => {
-  // Diff view options managed by localStorage hook
-  const [splitView, setSplitView] = useLocalStorage<boolean>(
-    "diffSplitView",
-    true
-  );
-  const [showAllLines, setShowAllLines] = useLocalStorage<boolean>(
-    "diffShowAllLines",
-    true
-  );
-
   return (
-    <Card className="p-4 flex flex-col h-full min-h-0">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center space-x-2">
-            <Button onClick={onRun} disabled={isRunning}>
-              <Play className="h-4 w-4 mr-2" />
-              {isRunning ? "Running..." : "Run"}
-            </Button>
-            {isRunning && onStop && (
-              <Button onClick={onStop} variant="outline" size="sm">
-                <Square className="h-4 w-4 mr-2" />
-                Stop
-              </Button>
-            )}
-          </div>
-          <Select value={selectedModel} onValueChange={onModelChange}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Select a model" />
-            </SelectTrigger>
-            <SelectContent>
-              {models.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  {model.name.replace(/^Google:\s*/, "")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+    <div className="flex flex-col h-full grow gap-4">
+      <Card className="p-4 flex flex-col flex-1 grow" style={{ backgroundColor: "#c5dcff", maxHeight: "100%" }}>
+        <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Diff:</span>
-            <Select
-              value={comparisonMode}
-              onValueChange={onComparisonModeChange}
-            >
-              <SelectTrigger className="w-[110px]">
-                <SelectValue placeholder="Comparison mode" />
+            <div className="flex items-center space-x-2">
+              <Button onClick={onRun} disabled={isRunning}>
+                <Play className="h-4 w-4 mr-2" />
+                {isRunning ? "Running..." : "Run"}
+              </Button>
+              {isRunning && onStop && (
+                <Button onClick={onStop} variant="outline" size="sm">
+                  <Square className="h-4 w-4 mr-2" />
+                  Stop
+                </Button>
+              )}
+            </div>
+            <Select value={selectedModel} onValueChange={onModelChange}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Select a model" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="input">Input</SelectItem>
-                <SelectItem value="reference" disabled={!hasReferenceMarkdown}>
-                  Reference
-                </SelectItem>
+                {models.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name.replace(/^Google:\s*/, "")}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          {comparisonMode && (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Split View:</span>
-                <Switch checked={splitView} onCheckedChange={setSplitView} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">All lines:</span>
-                <Switch
-                  checked={showAllLines}
-                  onCheckedChange={setShowAllLines}
-                />
-              </div>
-            </>
-          )}
+            <div className="flex items-center gap-2 flex-grow">
+            {promptResult && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="sm" variant="ghost">
+                      {/* if finishReason is not "stop", show an error icon instead of the info icon. */}
+                      {promptResult.finishReason && promptResult.finishReason !== "stop" ? (
+                        <AlertTriangle className="h-4 w-4 text-red-500" />
+                      ) : (
+                        <Info className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-md max-h-64 overflow-auto">
+                    <pre className="text-xs whitespace-pre-wrap">
+                      {promptResult && JSON.stringify({finishReason:promptResult.finishReason,inputs:promptResult.promptParams,usage:promptResult.usage, outputLength: promptResult.outputLength}, null, 2).replace(/"/g, "")}
+                    </pre>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {promptResult && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button size="sm" variant="ghost">
-                    {/* if finishReason is not "stop", show an error icon instead of the info icon. */}
-                    {promptResult.finishReason && promptResult.finishReason !== "stop" ? (
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
-                    ) : (
-                      <Info className="h-4 w-4" />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="max-w-md max-h-64 overflow-auto">
-                  <pre className="text-xs whitespace-pre-wrap">
-                    {promptResult && JSON.stringify({finishReason:promptResult.finishReason,inputs:promptResult.promptParams,usage:promptResult.usage, outputLength: promptResult.outputLength}, null, 2).replace(/"/g, "")}
-                  </pre>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          <Button onClick={onCopyOutput} size="sm" variant="ghost">
-            <Copy className="h-4 w-4 mr-2" />
-          </Button>
-        </div>
-      </div>
-      <Card className="flex-1 w-full min-h-0">
-        <MarkdownViewer
-          content={output}
-          compareWithText={
-            comparisonMode === "input" ? currentInput : referenceMarkdown
-          }
-          className="h-full"
-          splitView={splitView}
-          showDiffOnly={!showAllLines}
-        />
-      </Card>
-    </Card>
+      
+      <Tabs defaultValue="diff" className="flex-1 flex flex-col min-h-0 grow mt-[15px]">
+        <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
+          <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>
+          <TabsTrigger value="fields" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Fields</TabsTrigger>
+        </TabsList>
+        <TabsContent value="diff" className="flex-1 min-h-0 !mt-0 grow flex flex-col">
+          <DiffView
+            output={output}
+            comparisonMode={comparisonMode}
+            hasReferenceMarkdown={hasReferenceMarkdown}
+            currentInput={currentInput}
+            referenceMarkdown={referenceMarkdown}
+            onComparisonModeChange={onComparisonModeChange}
+            onCopyOutput={onCopyOutput}
+          />
+        </TabsContent>
+        <TabsContent value="fields" className="flex-1 min-h-0 !mt-0">
+          <FieldView />
+        </TabsContent>
+      </Tabs></Card>
+    </div>
   );
 };
