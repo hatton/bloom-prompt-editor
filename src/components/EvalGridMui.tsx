@@ -9,6 +9,7 @@ import {
   GridColumnVisibilityModel,
   GridRowSelectionModel,
   GridCallbackDetails,
+  GridRowId,
 } from "@mui/x-data-grid-pro";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -99,10 +100,12 @@ interface EvalGridState {
 
 interface EvalGridMuiProps {
   onRowSelectionChange?: (selectedBookId: number | null) => void;
+  onCheckboxSelectionChange?: (selectedBookIds: number[]) => void;
 }
 
 export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
   onRowSelectionChange,
+  onCheckboxSelectionChange,
 }) => {
   const [data, setData] = useState<InputBookWithComputedFields[]>([]);
   const [loading, setLoading] = useState(true);
@@ -375,39 +378,6 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
     ...item,
   }));
 
-  // Handle row selection
-  const handleRowSelection = useCallback(
-    (rowSelectionModel: GridRowSelectionModel) => {
-      let selectedIds: number[] = [];
-      let selectedId: number | null = null;
-
-      if (Array.isArray(rowSelectionModel)) {
-        selectedIds = rowSelectionModel.map((id) => Number(id));
-        selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
-      } else if (rowSelectionModel instanceof Set) {
-        selectedIds = Array.from(rowSelectionModel).map((id) => Number(id));
-        selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
-      } else if (
-        rowSelectionModel &&
-        typeof rowSelectionModel === "object" &&
-        "ids" in rowSelectionModel
-      ) {
-        const ids = rowSelectionModel.ids;
-        if (Array.isArray(ids)) {
-          selectedIds = ids.map((id) => Number(id));
-          selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
-        } else if (ids instanceof Set) {
-          selectedIds = Array.from(ids).map((id) => Number(id));
-          selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
-        }
-      }
-
-      setSelectedRowId(selectedIds);
-      onRowSelectionChange?.(selectedId);
-    },
-    [onRowSelectionChange]
-  );
-
   if (loading) {
     return (
       <Box
@@ -431,6 +401,16 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
   return (
     <Box sx={{ height: "100%", width: "100%" }}>
       <DataGridPro
+        checkboxSelection
+        onRowSelectionModelChange={(selectedRows: GridRowSelectionModel) => {
+          // The gridRowId is already the book ID since we use the book ID as the row ID
+          // The row ID is implicitly set to the book ID through the spread operator ...item  where item.id is the book's database ID from the book-input table.
+          const selectedBookIds = Array.from(selectedRows.ids).map(
+            (gridRowId: GridRowId) => Number(gridRowId)
+          );
+
+          onCheckboxSelectionChange?.(selectedBookIds);
+        }}
         rows={rows}
         columns={columns}
         loading={loading}
@@ -440,8 +420,13 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
         onSortModelChange={setSortModel}
         columnVisibilityModel={columnVisibilityModel}
         onColumnVisibilityModelChange={setColumnVisibilityModel}
-        rowSelectionModel={{ type: "include", ids: new Set(selectedRowId) }}
-        onRowSelectionModelChange={handleRowSelection}
+        disableColumnSelector={false}
+        onCellClick={(params, event) => {
+          // Handle single row selection for details view
+          const bookId = Number(params.id);
+          setSelectedRowId([bookId]);
+          onRowSelectionChange?.(bookId);
+        }}
         slots={{
           toolbar: GridToolbar,
         }}
@@ -457,8 +442,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             paginationModel: { page: 0, pageSize: 25 },
           },
         }}
-        disableMultipleRowSelection
-        disableRowSelectionOnClick={false}
+        // disableMultipleRowSelection={true}
         isCellEditable={() => false}
         density="compact"
         sx={{

@@ -4,6 +4,9 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { Button } from "@/components/ui/button";
+import { Play } from "lucide-react";
+import { RunLogDialog } from "@/components/RunLogDialog";
 import { EvalGridMui } from "@/components/EvalGridMui";
 import { FieldView } from "@/components/FieldView";
 import { ModelChooser } from "@/components/ModelChooser";
@@ -26,6 +29,15 @@ export const EvalTab: React.FC = () => {
     correctFieldSetId: number | null;
     recentRunFieldSetId: number | null;
   } | null>(null);
+
+  // State for tracking selected books for running tests
+  const [selectedForRun, setSelectedForRun] = useState<number[]>([]);
+  const [selectedBooksData, setSelectedBooksData] = useState<
+    Array<{ id: number; label: string | null }>
+  >([]);
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
+  const [runLog, setRunLog] = useState<string[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
 
   // Handle row selection from the grid
   const handleRowSelectionChange = useCallback(
@@ -66,6 +78,83 @@ export const EvalTab: React.FC = () => {
     [setSelectedBookId]
   );
 
+  // Handle checkbox selection change from the grid
+  const handleCheckboxSelectionChange = useCallback(
+    async (selectedIds: number[]) => {
+      console.log("Selected IDs:", selectedIds);
+      //     setSelectedForRun(selectedIds);
+      //     // Fetch book data for selected books
+      //     if (selectedIds.length > 0) {
+      //       try {
+      //         const { data: booksData, error } = await supabase
+      //           .from("book-input")
+      //           .select("id, label")
+      //           .in("id", selectedIds);
+      //         if (error) {
+      //           console.error("Error fetching selected books data:", error);
+      //           setSelectedBooksData([]);
+      //         } else {
+      //           setSelectedBooksData(booksData || []);
+      //         }
+      //       } catch (error) {
+      //         console.error("Error fetching selected books data:", error);
+      //         setSelectedBooksData([]);
+      //       }
+      //     } else {
+      //       setSelectedBooksData([]);
+      //     }
+    },
+    []
+  );
+
+  // Handle running tests
+  const handleRunTests = useCallback(async () => {
+    if (selectedForRun.length === 0) return;
+
+    setRunDialogOpen(true);
+    setIsRunning(true);
+    setRunLog([]);
+
+    try {
+      const log: string[] = [];
+      log.push(`Starting test run for ${selectedForRun.length} test books...`);
+      log.push(""); // Empty line for spacing
+      setRunLog([...log]);
+
+      // Simulate running tests for each selected book
+      for (const bookData of selectedBooksData) {
+        const label = bookData.label || `Book ${bookData.id}`;
+        log.push(`Running test for: ${label}`);
+        setRunLog([...log]);
+
+        // Simulate some processing time
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        // For now, just log the book label as requested
+        log.push(`  - Test book label: ${label}`);
+        log.push(`  - Book ID: ${bookData.id}`);
+        log.push(`  - Status: Completed`);
+        log.push(""); // Empty line for spacing
+        setRunLog([...log]);
+      }
+
+      log.push("✅ Test run completed successfully!");
+      setRunLog([...log]);
+    } catch (error) {
+      console.error("Error running tests:", error);
+      setRunLog((prev) => [...prev, `❌ Error: ${error}`]);
+    } finally {
+      setIsRunning(false);
+    }
+  }, [selectedForRun, selectedBooksData]);
+
+  // Close run dialog
+  const handleCloseRunDialog = useCallback(() => {
+    setRunDialogOpen(false);
+    setRunLog([]);
+    setIsRunning(false);
+  }, []);
+
   return (
     <div className="h-full w-full">
       <ResizablePanelGroup
@@ -80,12 +169,24 @@ export const EvalTab: React.FC = () => {
                 Test Book Evaluations
               </h2>
               <div className="flex items-center space-x-3">
+                <Button
+                  onClick={handleRunTests}
+                  disabled={selectedForRun.length === 0}
+                  variant="default"
+                  size="sm"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Run ({selectedForRun.length})
+                </Button>
                 <PromptChooser placeholder="Select prompt..." />
                 <ModelChooser className="ml-auto" />
               </div>
             </div>
             <div className="flex-1 min-h-0">
-              <EvalGridMui onRowSelectionChange={handleRowSelectionChange} />
+              <EvalGridMui
+                onRowSelectionChange={handleRowSelectionChange}
+                onCheckboxSelectionChange={handleCheckboxSelectionChange}
+              />
             </div>
           </div>
         </ResizablePanel>
@@ -117,6 +218,16 @@ export const EvalTab: React.FC = () => {
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* Run Dialog */}
+      <RunLogDialog
+        open={runDialogOpen}
+        onOpenChange={setRunDialogOpen}
+        selectedCount={selectedForRun.length}
+        runLog={runLog}
+        isRunning={isRunning}
+        onClose={handleCloseRunDialog}
+      />
     </div>
   );
 };
