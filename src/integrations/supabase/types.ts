@@ -6,6 +6,12 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+/**
+ * Field value conventions for field-set table:
+ * - null: Unknown/missing data (not counted in field counts)
+ * - "empty": Intentionally left empty (counted as filled field)
+ * - any other string: Actual field content (counted as filled field)
+ */
 export type Database = {
   public: {
     Tables: {
@@ -240,7 +246,7 @@ export type Tables<
   }
     ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never
+    : never
 > = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
   ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {

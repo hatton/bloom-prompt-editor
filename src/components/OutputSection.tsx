@@ -19,11 +19,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { LanguageModelUsage } from "ai";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface OpenRouterModel {
   id: string;
   name: string;
 }
+
+type Run = Tables<"run">;
 
 interface OutputSectionProps {
   output: string;
@@ -43,6 +47,7 @@ interface OutputSectionProps {
   };
   waitingForRun: boolean;
   runTimestamp?: string;
+  currentRun?: Run | null;
   onRun: () => void;
   onStop?: () => void;
   onModelChange: (value: string) => void;
@@ -63,6 +68,7 @@ export const OutputSection = ({
   promptResult,
   waitingForRun,
   runTimestamp,
+  currentRun,
   onRun,
   onStop,
   onModelChange,
@@ -70,16 +76,49 @@ export const OutputSection = ({
   onCopyOutput,
 }: OutputSectionProps) => {
   const [activeTab, setActiveTab] = useState("diff");
+  const [correctFieldSetId, setCorrectFieldSetId] = useState<number | null>(
+    null
+  );
+
+  // Load the correct field set ID from the selected book input
+  useEffect(() => {
+    const loadCorrectFieldSetId = async () => {
+      if (!selectedInputId) {
+        setCorrectFieldSetId(null);
+        return;
+      }
+
+      try {
+        const { data: bookInput, error } = await supabase
+          .from("book-input")
+          .select("correct_fields")
+          .eq("id", parseInt(selectedInputId))
+          .single();
+
+        if (error) {
+          console.error("Error loading book input:", error);
+          setCorrectFieldSetId(null);
+        } else {
+          setCorrectFieldSetId(bookInput?.correct_fields || null);
+        }
+      } catch (error) {
+        console.error("Error loading correct field set ID:", error);
+        setCorrectFieldSetId(null);
+      }
+    };
+
+    loadCorrectFieldSetId();
+  }, [selectedInputId]);
 
   const formatRunDate = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   };
 
@@ -89,7 +128,10 @@ export const OutputSection = ({
   };
   return (
     <div className="flex flex-col h-full grow gap-4">
-      <Card className="p-4 flex flex-col flex-1 grow" style={{ backgroundColor: "#c5dcff", maxHeight: "100%" }}>
+      <Card
+        className="p-4 flex flex-col flex-1 grow"
+        style={{ backgroundColor: "#c5dcff", maxHeight: "100%" }}
+      >
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="flex items-center space-x-2">
@@ -122,23 +164,37 @@ export const OutputSection = ({
               </span>
             )}
           </div>
-            <div className="flex items-center gap-2 flex-grow">
+          <div className="flex items-center gap-2 flex-grow">
             {promptResult && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" variant="ghost">
                       {/* if finishReason is not "stop", show an error icon instead of the info icon. */}
-                      {promptResult.finishReason && promptResult.finishReason !== "stop" ? (
+                      {promptResult.finishReason &&
+                      promptResult.finishReason !== "stop" ? (
                         <AlertTriangle className="h-4 w-4 text-red-500" />
                       ) : (
                         <Info className="h-4 w-4" />
                       )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-md max-h-64 overflow-auto">
+                  <TooltipContent
+                    side="left"
+                    className="max-w-md max-h-64 overflow-auto"
+                  >
                     <pre className="text-xs whitespace-pre-wrap">
-                      {promptResult && JSON.stringify({finishReason:promptResult.finishReason,inputs:promptResult.promptParams,usage:promptResult.usage, outputLength: promptResult.outputLength}, null, 2).replace(/"/g, "")}
+                      {promptResult &&
+                        JSON.stringify(
+                          {
+                            finishReason: promptResult.finishReason,
+                            inputs: promptResult.promptParams,
+                            usage: promptResult.usage,
+                            outputLength: promptResult.outputLength,
+                          },
+                          null,
+                          2
+                        ).replace(/"/g, "")}
                     </pre>
                   </TooltipContent>
                 </Tooltip>
@@ -152,18 +208,38 @@ export const OutputSection = ({
             <p className="text-lg text-gray-500">Waiting for Run</p>
           </div>
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 grow mt-[15px]">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="flex-1 flex flex-col min-h-0 grow mt-[15px]"
+          >
             <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
-              <TabsTrigger value="fields" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Fields</TabsTrigger>
-              <TabsTrigger value="diff" className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none">Markdown</TabsTrigger>
+              <TabsTrigger
+                value="fields"
+                className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none"
+              >
+                Fields
+              </TabsTrigger>
+              <TabsTrigger
+                value="diff"
+                className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none"
+              >
+                Markdown
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="fields" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
-              <FieldView 
-                output={output}
-                currentInputId={selectedInputId}
+            <TabsContent
+              value="fields"
+              className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
+            >
+              <FieldView
+                correctFieldSetId={correctFieldSetId}
+                resultFieldSetId={currentRun?.discovered_fields || null}
               />
             </TabsContent>
-            <TabsContent value="diff" className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden">
+            <TabsContent
+              value="diff"
+              className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
+            >
               <DiffView
                 output={output}
                 comparisonMode={comparisonMode}

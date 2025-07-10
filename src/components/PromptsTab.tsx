@@ -28,6 +28,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { LanguageModelUsage } from "ai";
+import { parseAndStoreFieldSet } from "@/lib/fieldParsing";
 
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
@@ -537,6 +538,16 @@ export const PromptsTab = () => {
       }
       // Only save to database if not aborted
       if (!controller.signal.aborted) {
+        // Parse fields from the output and create a field-set
+        let discoveredFieldsId = null;
+        try {
+          discoveredFieldsId = await parseAndStoreFieldSet(fullResult);
+          console.log("Created field set with ID:", discoveredFieldsId);
+        } catch (error) {
+          console.error("Error parsing and storing field set:", error);
+          // Continue with run creation even if field parsing fails
+        }
+
         // Create new run with the complete result
         const { data: newRun, error: runError } = await supabase
           .from("run")
@@ -547,7 +558,7 @@ export const PromptsTab = () => {
             temperature: promptSettings.temperature,
             model: selectedModel,
             notes: notes,
-            discovered_fields: null, // TODO: need to create a field-set from the output and point to this.
+            discovered_fields: discoveredFieldsId,
           })
           .select()
           .single();
@@ -732,6 +743,7 @@ export const PromptsTab = () => {
               onCopyOutput={copyOutput}
               waitingForRun={waitingForRun}
               runTimestamp={runs[currentRunIndex]?.created_at}
+              currentRun={runs[currentRunIndex] || null}
               promptResult={{
                 promptParams,
                 finishReason,

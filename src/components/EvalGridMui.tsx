@@ -12,17 +12,18 @@ import { Box, Typography, CircularProgress } from "@mui/material";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Tables, Database } from "@/integrations/supabase/types";
 import { getScore } from "@/lib/scoring";
 import { getMetadataFields } from "@/components/FieldSetEditor";
 
-type BookInput = Tables<"book-input">;
+type BookInput = Database["public"]["Tables"]["book-input"]["Row"];
+type FieldSet = Database["public"]["Tables"]["field-set"]["Row"];
 
 // Extended interface with computed fields
 interface InputBookWithComputedFields extends BookInput {
   wordCount: number;
   score: number | undefined;
-  correctFields: Tables<"field-set"> | null;
+  correctFields: FieldSet | null;
 }
 
 // Helper function to count words in markdown
@@ -37,8 +38,14 @@ const countWords = (markdown: string | null): number => {
 };
 
 // Helper function to format field values for display
+// Field value conventions:
+// - null: Unknown/missing data (displayed as "-")
+// - "empty": Intentionally left empty (displayed as "(empty)")
+// - any other string: Actual field content (displayed as-is)
 const formatFieldValue = (value: unknown, fieldName: string): string => {
   if (value === null || value === undefined) return "-";
+
+  if (value === "empty") return "(empty)";
 
   if (fieldName === "created_at") {
     return new Date(value as string).toLocaleDateString();
@@ -53,6 +60,32 @@ const formatFieldValue = (value: unknown, fieldName: string): string => {
   }
 
   return String(value);
+};
+
+// Helper function to count non-null fields in a field-set
+// Field value conventions:
+// - null: Unknown/missing data (not counted in field counts)
+// - "empty": Intentionally left empty (counted as filled field)
+// - any other string: Actual field content (counted as filled field)
+const countNonNullFields = (fieldSet: FieldSet | null): number => {
+  if (!fieldSet) return 0;
+
+  const metadataFields = getMetadataFields();
+
+  const count = metadataFields.reduce((count, field) => {
+    const value = fieldSet[field.name];
+
+    // Count fields that have content or are intentionally empty
+    // we wanted null to mean unknown and empty string to mean "should be empty", but
+    // something was supplying all the fields with empty strings, so
+    // no we exclude null/undefined/emptystring
+    if (value !== null && value !== undefined && value !== "") {
+      return count + 1;
+    }
+    return count;
+  }, 0);
+
+  return count;
 };
 
 interface EvalGridState {
@@ -227,11 +260,29 @@ export const EvalGridMui: React.FC = () => {
     },
     {
       field: "correct_fields",
-      headerName: "Correct Fields",
+      headerName: "Fields Count",
       width: 150,
+      type: "number",
       align: "center",
       headerAlign: "center",
-      valueFormatter: (value) => formatFieldValue(value, "correct_fields"),
+      valueGetter: (value, row) => {
+        const correctFields = (row as InputBookWithComputedFields)
+          .correctFields;
+        return countNonNullFields(correctFields);
+      },
+      renderCell: (params) => {
+        const count = params.value as number;
+        return (
+          <Typography
+            sx={{
+              color: count > 0 ? "primary.main" : "text.disabled",
+              fontWeight: count > 0 ? "medium" : "normal",
+            }}
+          >
+            {count}
+          </Typography>
+        );
+      },
     },
     {
       field: "score",
@@ -270,7 +321,7 @@ export const EvalGridMui: React.FC = () => {
   const metadataFields = getMetadataFields();
   metadataFields.forEach((field) => {
     columns.push({
-      field: field.name,
+      field: String(field.name),
       headerName: field.label,
       width: 150,
       valueGetter: (value, row) => {
@@ -278,7 +329,7 @@ export const EvalGridMui: React.FC = () => {
           .correctFields;
         return correctFields ? correctFields[field.name] : null;
       },
-      valueFormatter: (value) => formatFieldValue(value, field.name),
+      valueFormatter: (value) => formatFieldValue(value, String(field.name)),
     });
   });
 
