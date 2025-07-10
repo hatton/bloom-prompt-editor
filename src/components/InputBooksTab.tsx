@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { InputBookEditor } from "@/components/InputBookEditor";
@@ -11,7 +12,10 @@ type BookInput = Tables<"book-input">;
 
 export const InputBooksTab = () => {
   const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
-  const [selectedInputId, setSelectedInputId] = useState<number | null>(null);
+  const [selectedInputId, setSelectedInputId] = useLocalStorage<number | null>(
+    "lastSelectedInputBook",
+    null
+  );
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -24,9 +28,16 @@ export const InputBooksTab = () => {
 
       if (error) throw error;
 
-      setBookInputs(data || []);
-      if (data && data.length > 0 && !selectedInputId) {
-        setSelectedInputId(data[0].id);
+      // Sort alphabetically by label
+      const sortedData = (data || []).sort((a, b) => {
+        const labelA = (a.label || "").toLowerCase();
+        const labelB = (b.label || "").toLowerCase();
+        return labelA.localeCompare(labelB);
+      });
+
+      setBookInputs(sortedData);
+      if (sortedData && sortedData.length > 0 && !selectedInputId) {
+        setSelectedInputId(sortedData[0].id);
       }
     } catch (error) {
       console.error("Error loading book inputs:", error);
@@ -37,7 +48,7 @@ export const InputBooksTab = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedInputId, toast]);
+  }, [selectedInputId, setSelectedInputId, toast]);
 
   // Load book inputs from Supabase
   useEffect(() => {
@@ -59,7 +70,15 @@ export const InputBooksTab = () => {
 
       if (error) throw error;
 
-      setBookInputs((prev) => [data, ...prev]);
+      setBookInputs((prev) => {
+        const newInputs = [data, ...prev];
+        // Sort alphabetically by label
+        return newInputs.sort((a, b) => {
+          const labelA = (a.label || "").toLowerCase();
+          const labelB = (b.label || "").toLowerCase();
+          return labelA.localeCompare(labelB);
+        });
+      });
       setSelectedInputId(data.id);
       toast({
         title: "New input created",
@@ -117,11 +136,17 @@ export const InputBooksTab = () => {
 
   // Handle input updates from the editor
   const handleInputUpdate = (updatedInput: BookInput) => {
-    setBookInputs((prev) =>
-      prev.map((input) =>
+    setBookInputs((prev) => {
+      const updatedInputs = prev.map((input) =>
         input.id === updatedInput.id ? updatedInput : input
-      )
-    );
+      );
+      // Sort alphabetically by label after update
+      return updatedInputs.sort((a, b) => {
+        const labelA = (a.label || "").toLowerCase();
+        const labelB = (b.label || "").toLowerCase();
+        return labelA.localeCompare(labelB);
+      });
+    });
   };
 
   if (loading) {
@@ -137,9 +162,9 @@ export const InputBooksTab = () => {
   return (
     <div className="flex h-full">
       {/* Sidebar - Input List */}
-      <div className="w-80 bg-blue-200 flex flex-col">
-        <div className="p-4 border-gray-200">
-          <div className="flex items-center justify-between mb-3">
+      <div className="w-80 bg-blue-100 flex flex-col">
+        <div className="p-3 border-gray-200">
+          <div className="flex items-center justify-between">
             <Button
               onClick={addNewInput}
               size="sm"
@@ -148,17 +173,20 @@ export const InputBooksTab = () => {
               <Plus className="w-4 h-4 mr-1" />
               Add
             </Button>
+            <span className="text-sm text-gray-600">
+              {bookInputs.length} book{bookInputs.length !== 1 ? "s" : ""}
+            </span>
           </div>
         </div>
 
-        <div className="p-4 space-y-2 overflow-y-auto flex-1">
+        <div className="px-3 pb-3 space-y-1 overflow-y-auto flex-1">
           {bookInputs.map((input) => (
-            <Card
+            <div
               key={input.id}
-              className={`p-3 cursor-pointer transition-all group bg-gray-50 ${
+              className={`px-3 py-2 cursor-pointer transition-all group rounded-md ${
                 selectedInputId === input.id
-                  ? "bg-white border-blue-600 shadow-sm border-[3px]"
-                  : "hover:bg-gray-50"
+                  ? "bg-white border-blue-600 shadow-sm border-2"
+                  : "hover:bg-gray-50 border border-transparent"
               }`}
               onClick={() => handleInputSelection(input.id)}
             >
@@ -167,9 +195,6 @@ export const InputBooksTab = () => {
                   <h4 className="text-sm font-medium text-gray-900 truncate">
                     {input.label || "Untitled"}
                   </h4>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(input.created_at).toLocaleDateString()}
-                  </p>
                 </div>
                 <Button
                   variant="ghost"
@@ -178,12 +203,12 @@ export const InputBooksTab = () => {
                     e.stopPropagation();
                     deleteInput(input.id);
                   }}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       </div>
@@ -191,8 +216,8 @@ export const InputBooksTab = () => {
       {/* Main Content - Editor */}
       <div className="flex-1 flex flex-col bg-blue-100">
         {selectedInputId ? (
-          <InputBookEditor 
-            inputId={selectedInputId} 
+          <InputBookEditor
+            inputId={selectedInputId}
             onInputUpdate={handleInputUpdate}
           />
         ) : (

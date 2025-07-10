@@ -16,7 +16,10 @@ interface InputBookEditorProps {
   onInputUpdate?: (input: BookInput) => void;
 }
 
-export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps) => {
+export const InputBookEditor = ({
+  inputId,
+  onInputUpdate,
+}: InputBookEditorProps) => {
   const [input, setInput] = useState<BookInput | null>(null);
   const [currentLabel, setCurrentLabel] = useState("");
   const [currentMarkdown, setCurrentMarkdown] = useState("");
@@ -37,7 +40,8 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
   // Track original values to detect changes
   const [originalLabel, setOriginalLabel] = useState("");
   const [originalMarkdown, setOriginalMarkdown] = useState("");
-  const [originalReferenceMarkdown, setOriginalReferenceMarkdown] = useState("");
+  const [originalReferenceMarkdown, setOriginalReferenceMarkdown] =
+    useState("");
 
   // Load input data when inputId changes
   useEffect(() => {
@@ -109,7 +113,13 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
         saveData();
       }
     };
-  }, [inputId, hasUnsavedChanges, currentLabel, currentMarkdown, currentReferenceMarkdown]);
+  }, [
+    inputId,
+    hasUnsavedChanges,
+    currentLabel,
+    currentMarkdown,
+    currentReferenceMarkdown,
+  ]);
 
   const handleLabelChange = (value: string) => {
     setCurrentLabel(value);
@@ -289,9 +299,7 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
       <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           {hasUnsavedChanges && (
-            <span className="text-sm text-amber-600">
-              Unsaved changes
-            </span>
+            <span className="text-sm text-amber-600">Unsaved changes</span>
           )}
         </div>
 
@@ -339,7 +347,7 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
                 <label className="block text-sm font-medium text-gray-700">
                   OCR Markdown
                 </label>
-                <Button variant="outline" size="sm" onClick={handlePaste}>
+                <Button variant="ghost" size="sm" onClick={handlePaste}>
                   <Clipboard className="w-4 h-4" />
                 </Button>
               </div>
@@ -382,7 +390,7 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
                   Optional Reference Markdown (i.e. the "correct" answer)
                 </label>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={handleReferencePaste}
                 >
