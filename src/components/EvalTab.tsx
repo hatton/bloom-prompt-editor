@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/resizable";
 import { EvalGridMui } from "@/components/EvalGridMui";
 import { FieldView } from "@/components/FieldView";
+import { ModelChooser } from "@/components/ModelChooser";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { getMostRecentRunFieldSetId } from "@/lib/runUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,10 +74,11 @@ export const EvalTab: React.FC = () => {
       >
         <ResizablePanel defaultSize={splitPosition[0]} minSize={30}>
           <div className="h-full flex flex-col">
-            <div className="p-4 border-b bg-gray-50">
+            <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-900">
                 Test Book Evaluations
               </h2>
+              <ModelChooser className="ml-auto" />
             </div>
             <div className="flex-1 min-h-0">
               <EvalGridMui onRowSelectionChange={handleRowSelectionChange} />

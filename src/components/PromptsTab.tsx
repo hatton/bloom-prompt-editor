@@ -17,7 +17,6 @@ import type { Tables } from "@/integrations/supabase/types";
 import {
   runPrompt,
   runPromptStream,
-  getModels,
 } from "@/integrations/openrouter/openRouterClient";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { OutputSection } from "@/components/OutputSection";
@@ -33,11 +32,6 @@ import { parseAndStoreFieldSet } from "@/lib/fieldParsing";
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
 type Run = Tables<"run">;
-
-interface OpenRouterModel {
-  id: string;
-  name: string;
-}
 
 export const PromptsTab = () => {
   // Settings managed by localStorage hook
@@ -83,7 +77,6 @@ export const PromptsTab = () => {
   const [originalPromptLabel, setOriginalPromptLabel] = useState("");
   const [isStarred, setIsStarred] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [models, setModels] = useState<OpenRouterModel[]>([]);
   const { toast } = useToast();
   const [waitingForRun, setWaitingForRun] = useState(false);
 
@@ -278,8 +271,6 @@ export const PromptsTab = () => {
   // Load data on component mount
   useEffect(() => {
     loadInitialData();
-    // Fetch models in the background
-    getModels().then(setModels);
   }, [loadInitialData]);
 
   // Auto-switch to "input" if "reference" is selected but no reference markdown exists
@@ -742,7 +733,6 @@ export const PromptsTab = () => {
             <OutputSection
               output={output}
               isRunning={isRunning}
-              models={models}
               selectedModel={selectedModel}
               comparisonMode={comparisonMode}
               hasReferenceMarkdown={hasReferenceMarkdown}

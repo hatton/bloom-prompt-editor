@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { ModelChooser } from "@/components/ModelChooser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Square, Info, AlertTriangle } from "lucide-react";
 import { DiffView } from "@/components/DiffView";
@@ -22,17 +16,11 @@ import { LanguageModelUsage } from "ai";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
-interface OpenRouterModel {
-  id: string;
-  name: string;
-}
-
 type Run = Tables<"run">;
 
 interface OutputSectionProps {
   output: string;
   isRunning: boolean;
-  models: OpenRouterModel[];
   selectedModel: string;
   comparisonMode: string;
   hasReferenceMarkdown: boolean;
@@ -58,7 +46,6 @@ interface OutputSectionProps {
 export const OutputSection = ({
   output,
   isRunning,
-  models,
   selectedModel,
   comparisonMode,
   hasReferenceMarkdown,
@@ -155,18 +142,10 @@ export const OutputSection = ({
                 </Button>
               )}
             </div>
-            <Select value={selectedModel} onValueChange={onModelChange}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Select a model" />
-              </SelectTrigger>
-              <SelectContent>
-                {models.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>
-                    {model.name.replace(/^Google:\s*/, "")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ModelChooser
+              selectedModel={selectedModel}
+              onModelChange={onModelChange}
+            />
             {runTimestamp && (
               <span className="text-sm text-gray-600 ml-4">
                 {formatRunDate(runTimestamp)}
