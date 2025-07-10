@@ -53,7 +53,7 @@ const Index = () => {
                 disabled={!isReady}
                 className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-blue-600 data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
-                Runs
+                Prompts
               </TabsTrigger>
               <TabsTrigger
                 value="evals"

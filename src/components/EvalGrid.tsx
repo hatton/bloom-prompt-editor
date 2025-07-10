@@ -30,13 +30,17 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { ArrowUpDown, MoreHorizontal, Settings } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, Settings, RotateCcw } from "lucide-react";
+import { getScore } from "@/lib/scoring";
+import { getMetadataFields } from "@/components/FieldSetEditor";
 
 type BookInput = Tables<"book-input">;
 
 // Extended interface with computed fields
 interface InputBookWithComputedFields extends BookInput {
   wordCount: number;
+  score: number | undefined;
+  correctFields: Tables<"field-set"> | null; // Field-set data for correct answers
 }
 
 // Helper function to count words in markdown
@@ -100,12 +104,30 @@ export const EvalGrid: React.FC = () => {
       setBookInputs(bookData || []);
 
       // Transform book inputs to include computed fields
-      const transformedData: InputBookWithComputedFields[] = (
-        bookData || []
-      ).map((book) => ({
-        ...book,
-        wordCount: countWords(book.ocr_markdown),
-      }));
+      const transformedData: InputBookWithComputedFields[] = await Promise.all(
+        (bookData || []).map(async (book) => {
+          // Get correct field-set data if available
+          let correctFields = null;
+          if (book.correct_fields) {
+            const { data: fieldSetData } = await supabase
+              .from("field-set")
+              .select("*")
+              .eq("id", book.correct_fields)
+              .single();
+            correctFields = fieldSetData;
+          }
+
+          // Calculate score
+          const score = await getScore(book.id);
+
+          return {
+            ...book,
+            wordCount: countWords(book.ocr_markdown),
+            score,
+            correctFields,
+          };
+        })
+      );
 
       setData(transformedData);
     } catch (error) {
@@ -162,7 +184,6 @@ export const EvalGrid: React.FC = () => {
           className="h-auto p-0 font-medium"
         >
           ID
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -178,7 +199,6 @@ export const EvalGrid: React.FC = () => {
           className="h-auto p-0 font-medium"
         >
           Label
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -196,7 +216,6 @@ export const EvalGrid: React.FC = () => {
           className="h-auto p-0 font-medium"
         >
           Created
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -212,7 +231,6 @@ export const EvalGrid: React.FC = () => {
           className="h-auto p-0 font-medium"
         >
           Word Count
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -264,7 +282,6 @@ export const EvalGrid: React.FC = () => {
           className="h-auto p-0 font-medium"
         >
           Correct Fields
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
@@ -273,7 +290,80 @@ export const EvalGrid: React.FC = () => {
         </div>
       ),
     },
+
+    {
+      accessorKey: "score",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-medium"
+        >
+          Score
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const score = row.getValue("score") as number | undefined;
+        return (
+          <div className="text-center">
+            {score !== undefined ? (
+              <span
+                className={`font-medium ${
+                  score > 0
+                    ? "text-green-600"
+                    : score < 0
+                    ? "text-red-600"
+                    : "text-gray-500"
+                }`}
+              >
+                {score}
+              </span>
+            ) : (
+              <span className="text-gray-400">-</span>
+            )}
+          </div>
+        );
+      },
+      size: 100,
+      minSize: 80,
+      maxSize: 130,
+      enableResizing: true,
+    },
   ];
+
+  // Add field-set metadata columns
+  const metadataFields = getMetadataFields();
+  metadataFields.forEach((field) => {
+    columns.push({
+      id: field.name,
+      accessorKey: field.name,
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="h-auto p-0 font-medium"
+        >
+          {field.label}
+        </Button>
+      ),
+      accessorFn: (row) => {
+        const correctFields = row.correctFields;
+        return correctFields ? correctFields[field.name] : null;
+      },
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return (
+          <div className="max-w-xs truncate text-sm">
+            {formatFieldValue(value, field.name)}
+          </div>
+        );
+      },
+      size: 150,
+      minSize: 100,
+      maxSize: 300,
+      enableResizing: true,
+    });
+  });
 
   const table = useReactTable({
     data,
