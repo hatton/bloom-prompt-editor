@@ -57,9 +57,9 @@ export const PromptsTab = () => {
     "input"
   );
   const [openRouterApiKey] = useLocalStorage<string>("openRouterApiKey", "");
-const [promptParams, setPromptParams] = useState({});
-const [finishReason, setFinishReason] = useState<string | null>(null);
-const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
+  const [promptParams, setPromptParams] = useState({});
+  const [finishReason, setFinishReason] = useState<string | null>(null);
+  const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
 
   // Other state
   const [promptSettings, setPromptSettings] = useState({
@@ -93,17 +93,17 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
         setOutput(run.output || "");
         setSelectedInputId(run.book_input_id?.toString() || "");
         setIsStarred(run.human_tags?.includes("star") || false);
-        
+
         // Load run-specific settings
         if (run.model) {
           setSelectedModel(run.model);
         }
-        
+
         // TODO: Handle discovered_fields when field discovery is implemented
         // if (run.discovered_fields) {
         //   // Load and display the discovered field set
         // }
-        
+
         setPromptParams({}); // TODO: Should we store and load these?
         setFinishReason(null); // TODO: Should we store and load these?
         setUsage(null); // TODO: Should we store and load these?
@@ -460,14 +460,15 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
       }
 
       // Get the stream with abort signal
-      const { textStream, promptParams, finishReasonPromise, usagePromise } = await runPromptStream(
-        promptSettings.promptText,
-        selectedInput.ocr_markdown || "",
-        selectedModel,
-        openRouterApiKey,
-        promptSettings.temperature,
-        controller.signal
-      );
+      const { textStream, promptParams, finishReasonPromise, usagePromise } =
+        await runPromptStream(
+          promptSettings.promptText,
+          selectedInput.ocr_markdown || "",
+          selectedModel,
+          openRouterApiKey,
+          promptSettings.temperature,
+          controller.signal
+        );
       setPromptParams(promptParams);
       let fullResult = "";
 
@@ -526,9 +527,11 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
         console.error("Error getting finish reason:", error);
       }
 
-      if(finishReason && finishReason !== "stop"){
-        if(finishReason === "length") {
-          throw new Error(`Ran out of tokens before finishing (max tokens reached)`);
+      if (finishReason && finishReason !== "stop") {
+        if (finishReason === "length") {
+          throw new Error(
+            `Ran out of tokens before finishing (max tokens reached)`
+          );
         }
         throw new Error(`Streaming finished with reason: ${finishReason}`);
       }
@@ -544,7 +547,7 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
             temperature: promptSettings.temperature,
             model: selectedModel,
             notes: notes,
-            discovered_fields: null, // TODO: probably going to remove this
+            discovered_fields: null, // TODO: need to create a field-set from the output and point to this.
           })
           .select()
           .single();
@@ -587,7 +590,6 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
       // Note: The toast will be shown in the catch block of handleRun
     }
   };
-
 
   const copyOutput = async () => {
     try {
