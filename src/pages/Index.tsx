@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RunsTab } from "@/components/RunsTab";
+import { PromptsTab } from "@/components/PromptsTab";
 import { InputBooksTab } from "@/components/InputBooksTab";
 import { SettingsTab } from "@/components/SettingsTab";
 import { EvalTab } from "@/components/EvalTab";
@@ -74,7 +74,7 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="runs" className="p-0 mt-0 flex-1 min-h-0">
-              <RunsTab />
+              <PromptsTab />
             </TabsContent>
 
             <TabsContent value="evals" className="p-0 mt-0 flex-1 min-h-0">

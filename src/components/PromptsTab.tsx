@@ -38,7 +38,7 @@ interface OpenRouterModel {
   name: string;
 }
 
-export const RunsTab = () => {
+export const PromptsTab = () => {
   // Settings managed by localStorage hook
   const [currentPromptId, setCurrentPromptId] = useLocalStorage<number | null>(
     "currentPromptId",
