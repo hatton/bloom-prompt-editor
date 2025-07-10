@@ -30,13 +30,14 @@ export const ModelChooser = ({
   width = "w-[150px]",
 }: ModelChooserProps) => {
   const [models, setModels] = useState<OpenRouterModel[]>([]);
-  const [internalSelectedModel, setInternalSelectedModel] = useLocalStorage<string>(
-    "selectedModel",
-    "google/gemini-flash-1.5"
-  );
+  const [internalSelectedModel, setInternalSelectedModel] =
+    useLocalStorage<string>("selectedModel", "google/gemini-flash-1.5");
 
   // Use external state if provided, otherwise use internal state
-  const selectedModel = externalSelectedModel !== undefined ? externalSelectedModel : internalSelectedModel;
+  const selectedModel =
+    externalSelectedModel !== undefined
+      ? externalSelectedModel
+      : internalSelectedModel;
   const onModelChange = externalOnModelChange || setInternalSelectedModel;
 
   // Load models on component mount

@@ -18,7 +18,7 @@ export async function getScore(
 
   try {
     // Get the test book with its correct_fields reference
-    console.log(`[getScore] Fetching test book data...`);
+    //console.log(`[getScore] Fetching test book data...`);
     const { data: inputBook, error: inputError } = await supabase
       .from("book-input")
       .select("correct_fields")
@@ -30,7 +30,7 @@ export async function getScore(
       return undefined;
     }
 
-    console.log(`[getScore] Input book data:`, inputBook);
+    //console.log(`[getScore] Input book data:`, inputBook);
 
     // If no correct fields are set, return undefined
     if (!inputBook.correct_fields) {
@@ -40,10 +40,10 @@ export async function getScore(
       return undefined;
     }
 
-    console.log(`[getScore] Correct fields ID: ${inputBook.correct_fields}`);
+    //console.log(`[getScore] Correct fields ID: ${inputBook.correct_fields}`);
 
     // Get the correct answers (field-set)
-    console.log(`[getScore] Fetching correct field set...`);
+    //console.log(`[getScore] Fetching correct field set...`);
     const { data: correctFieldSet, error: correctError } = await supabase
       .from("field-set")
       .select("*")
@@ -58,36 +58,36 @@ export async function getScore(
       return undefined;
     }
 
-    console.log(`[getScore] Correct field set:`, correctFieldSet);
+    //console.log(`[getScore] Correct field set:`, correctFieldSet);
 
     // Get the most recent run for this test book
-    console.log(`[getScore] Fetching most recent run...`);
+    //console.log(`[getScore] Fetching most recent run...`);
     const recentRun = await getMostRecentRun(inputBookId);
 
     if (!recentRun) {
-      console.log(`[getScore] No runs found for test book ${inputBookId}`);
+      //console.log(`[getScore] No runs found for test book ${inputBookId}`);
       return undefined;
     }
 
-    console.log(`[getScore] Recent run data:`, recentRun);
+    //console.log(`[getScore] Recent run data:`, recentRun);
 
     // If the run has no discovered fields, return undefined
     if (!recentRun.discovered_fields) {
-      console.log(
-        `[getScore] Recent run has no discovered_fields, returning undefined`
-      );
-      console.log(
-        `[getScore] This means no LLM output has been processed and stored for comparison yet`
-      );
+      // console.log(
+      //   `[getScore] Recent run has no discovered_fields, returning undefined`
+      // );
+      // console.log(
+      //   `[getScore] This means no LLM output has been processed and stored for comparison yet`
+      // );
       return undefined;
     }
 
-    console.log(
-      `[getScore] Discovered fields ID: ${recentRun.discovered_fields}`
-    );
+    //console.log(
+    //  `[getScore] Discovered fields ID: ${recentRun.discovered_fields}`
+    //);
 
     // Get the discovered fields from the run
-    console.log(`[getScore] Fetching discovered field set...`);
+    //console.log(`[getScore] Fetching discovered field set...`);
     const { data: discoveredFieldSet, error: discoveredError } = await supabase
       .from("field-set")
       .select("*")
@@ -102,14 +102,14 @@ export async function getScore(
       return undefined;
     }
 
-    console.log(`[getScore] Discovered field set:`, discoveredFieldSet);
+    //console.log(`[getScore] Discovered field set:`, discoveredFieldSet);
 
     // Get the list of metadata fields to compare
     const metadataFields = getMetadataFields();
-    console.log(
-      `[getScore] Metadata fields to compare:`,
-      metadataFields.map((f) => f.name)
-    );
+    //console.log(
+    //  `[getScore] Metadata fields to compare:`,
+    //  metadataFields.map((f) => f.name)
+    //);
 
     // Check if correct field set has any non-empty values
     const hasValidCorrectAnswers = metadataFields.some((field) => {
@@ -122,9 +122,9 @@ export async function getScore(
     });
 
     if (!hasValidCorrectAnswers) {
-      console.log(
-        `[getScore] No valid correct answers found in field set, returning undefined`
-      );
+      // console.log(
+      //   `[getScore] No valid correct answers found in field set, returning undefined`
+      // );
       return undefined;
     }
 
@@ -136,9 +136,9 @@ export async function getScore(
       const correctValue = correctFieldSet[field.name] as string | null;
       const discoveredValue = discoveredFieldSet[field.name] as string | null;
 
-      console.log(
-        `[getScore] Comparing field '${field.name}': correct='${correctValue}', discovered='${discoveredValue}'`
-      );
+      // console.log(
+      //   `[getScore] Comparing field '${field.name}': correct='${correctValue}', discovered='${discoveredValue}'`
+      // );
 
       // Count all fields that have correct answers (including empty strings)
       if (correctValue !== null && correctValue !== undefined) {
@@ -150,33 +150,33 @@ export async function getScore(
           .trim()
           .toLowerCase();
 
-        console.log(
-          `[getScore] Normalized values - correct: '${normalizedCorrect}', discovered: '${normalizedDiscovered}'`
-        );
+        // console.log(
+        //   `[getScore] Normalized values - correct: '${normalizedCorrect}', discovered: '${normalizedDiscovered}'`
+        // );
 
         if (normalizedCorrect === normalizedDiscovered) {
           correctFields++;
-          console.log(
-            `[getScore] ✓ Match for '${field.name}': correct fields: ${correctFields}/${totalFields}`
-          );
+          // console.log(
+          //   `[getScore] ✓ Match for '${field.name}': correct fields: ${correctFields}/${totalFields}`
+          // );
         } else {
-          console.log(
-            `[getScore] ✗ Mismatch for '${field.name}': correct fields: ${correctFields}/${totalFields}`
-          );
+          // console.log(
+          //   `[getScore] ✗ Mismatch for '${field.name}': correct fields: ${correctFields}/${totalFields}`
+          // );
         }
       } else {
-        console.log(
-          `[getScore] Skipping field '${field.name}': no correct answer provided`
-        );
+        // console.log(
+        //   `[getScore] Skipping field '${field.name}': no correct answer provided`
+        // );
       }
     }
 
     // Calculate percentage score
     const percentageScore =
       totalFields > 0 ? Math.round((correctFields / totalFields) * 100) : 0;
-    console.log(
-      `[getScore] Final score: ${correctFields}/${totalFields} = ${percentageScore}%`
-    );
+    // console.log(
+    //   `[getScore] Final score: ${correctFields}/${totalFields} = ${percentageScore}%`
+    // );
     return percentageScore;
   } catch (error) {
     console.error("[getScore] Error calculating score:", error);
