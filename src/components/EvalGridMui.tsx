@@ -7,6 +7,8 @@ import {
   GridFilterModel,
   GridSortModel,
   GridColumnVisibilityModel,
+  GridRowSelectionModel,
+  GridCallbackDetails,
 } from "@mui/x-data-grid-pro";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -14,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, Database } from "@/integrations/supabase/types";
 import { getScore } from "@/lib/scoring";
+import { getMostRecentRunFieldSetId } from "@/lib/runUtils";
 import { getMetadataFields } from "@/components/FieldSetEditor";
 
 type BookInput = Database["public"]["Tables"]["book-input"]["Row"];
@@ -94,9 +97,16 @@ interface EvalGridState {
   columnVisibilityModel: GridColumnVisibilityModel;
 }
 
-export const EvalGridMui: React.FC = () => {
+interface EvalGridMuiProps {
+  onRowSelectionChange?: (selectedBookId: number | null) => void;
+}
+
+export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
+  onRowSelectionChange,
+}) => {
   const [data, setData] = useState<InputBookWithComputedFields[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedRowId, setSelectedRowId] = useState<number[]>([]);
   const { toast } = useToast();
 
   // Store grid state in localStorage
@@ -338,6 +348,39 @@ export const EvalGridMui: React.FC = () => {
     ...item,
   }));
 
+  // Handle row selection
+  const handleRowSelection = useCallback(
+    (rowSelectionModel: GridRowSelectionModel) => {
+      let selectedIds: number[] = [];
+      let selectedId: number | null = null;
+
+      if (Array.isArray(rowSelectionModel)) {
+        selectedIds = rowSelectionModel.map((id) => Number(id));
+        selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
+      } else if (rowSelectionModel instanceof Set) {
+        selectedIds = Array.from(rowSelectionModel).map((id) => Number(id));
+        selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
+      } else if (
+        rowSelectionModel &&
+        typeof rowSelectionModel === "object" &&
+        "ids" in rowSelectionModel
+      ) {
+        const ids = rowSelectionModel.ids;
+        if (Array.isArray(ids)) {
+          selectedIds = ids.map((id) => Number(id));
+          selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
+        } else if (ids instanceof Set) {
+          selectedIds = Array.from(ids).map((id) => Number(id));
+          selectedId = selectedIds.length > 0 ? selectedIds[0] : null;
+        }
+      }
+
+      setSelectedRowId(selectedIds);
+      onRowSelectionChange?.(selectedId);
+    },
+    [onRowSelectionChange]
+  );
+
   if (loading) {
     return (
       <Box
@@ -370,6 +413,7 @@ export const EvalGridMui: React.FC = () => {
         onSortModelChange={setSortModel}
         columnVisibilityModel={columnVisibilityModel}
         onColumnVisibilityModelChange={setColumnVisibilityModel}
+        onRowSelectionModelChange={handleRowSelection}
         slots={{
           toolbar: GridToolbar,
         }}
@@ -385,13 +429,24 @@ export const EvalGridMui: React.FC = () => {
             paginationModel: { page: 0, pageSize: 25 },
           },
         }}
-        checkboxSelection
-        disableRowSelectionOnClick
+        disableMultipleRowSelection
+        disableRowSelectionOnClick={false}
+        isCellEditable={() => false}
         density="compact"
         sx={{
           "& .MuiDataGrid-cell": {
             borderBottom: "1px solid",
             borderBottomColor: "divider",
+            cursor: "default",
+            "&:focus": {
+              outline: "none",
+            },
+            "&:focus-within": {
+              outline: "none",
+            },
+          },
+          "& .MuiDataGrid-cell--focused": {
+            outline: "none !important",
           },
           "& .MuiDataGrid-columnHeaders": {
             backgroundColor: "grey.50",

@@ -1,12 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getMetadataFields } from "@/components/FieldSetEditor";
+import { getMostRecentRun } from "@/lib/runUtils";
 import type { Tables } from "@/integrations/supabase/types";
 
 type FieldSet = Tables<"field-set">;
-type Run = Tables<"run">;
 
 /**
- * Calculate the score for an input book by comparing correct answers to the most recent run's discovered fields.
+ * Calculate the score for an test book by comparing correct answers to the most recent run's discovered fields.
  * Returns the score (positive for matches, negative for mismatches) or undefined if no correct answers are available.
  */
 export async function getScore(
@@ -17,8 +17,8 @@ export async function getScore(
   );
 
   try {
-    // Get the input book with its correct_fields reference
-    console.log(`[getScore] Fetching input book data...`);
+    // Get the test book with its correct_fields reference
+    console.log(`[getScore] Fetching test book data...`);
     const { data: inputBook, error: inputError } = await supabase
       .from("book-input")
       .select("correct_fields")
@@ -26,7 +26,7 @@ export async function getScore(
       .single();
 
     if (inputError) {
-      console.error("[getScore] Error fetching input book:", inputError);
+      console.error("[getScore] Error fetching test book:", inputError);
       return undefined;
     }
 
@@ -35,7 +35,7 @@ export async function getScore(
     // If no correct fields are set, return undefined
     if (!inputBook.correct_fields) {
       console.log(
-        `[getScore] No correct_fields set for input book, returning undefined`
+        `[getScore] No correct_fields set for test book, returning undefined`
       );
       return undefined;
     }
@@ -60,23 +60,12 @@ export async function getScore(
 
     console.log(`[getScore] Correct field set:`, correctFieldSet);
 
-    // Get the most recent run for this input book
+    // Get the most recent run for this test book
     console.log(`[getScore] Fetching most recent run...`);
-    const { data: recentRun, error: runError } = await supabase
-      .from("run")
-      .select("discovered_fields")
-      .eq("book_input_id", inputBookId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    const recentRun = await getMostRecentRun(inputBookId);
 
-    if (runError) {
-      // If no runs exist, return undefined
-      if (runError.code === "PGRST116") {
-        console.log(`[getScore] No runs found for input book ${inputBookId}`);
-        return undefined;
-      }
-      console.error("[getScore] Error fetching recent run:", runError);
+    if (!recentRun) {
+      console.log(`[getScore] No runs found for test book ${inputBookId}`);
       return undefined;
     }
 

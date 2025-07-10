@@ -1,16 +1,64 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { EvalGridMui } from "@/components/EvalGridMui";
+import { FieldView } from "@/components/FieldView";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { getMostRecentRunFieldSetId } from "@/lib/runUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 export const EvalTab: React.FC = () => {
   const [splitPosition, setSplitPosition] = useLocalStorage<number[]>(
     "evalTabSplitPosition",
     [60, 40]
+  );
+
+  const [selectedBookId, setSelectedBookId] = useState<number | null>(null);
+  const [selectedBookData, setSelectedBookData] = useState<{
+    correctFieldSetId: number | null;
+    recentRunFieldSetId: number | null;
+  } | null>(null);
+
+  // Handle row selection from the grid
+  const handleRowSelectionChange = useCallback(
+    async (bookId: number | null) => {
+      setSelectedBookId(bookId);
+
+      if (!bookId) {
+        setSelectedBookData(null);
+        return;
+      }
+
+      try {
+        // Get the book input data to find correct_fields
+        const { data: bookInput, error } = await supabase
+          .from("book-input")
+          .select("correct_fields")
+          .eq("id", bookId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching book input:", error);
+          setSelectedBookData(null);
+          return;
+        }
+
+        // Get the most recent run's field-set ID
+        const recentRunFieldSetId = await getMostRecentRunFieldSetId(bookId);
+
+        setSelectedBookData({
+          correctFieldSetId: bookInput.correct_fields,
+          recentRunFieldSetId,
+        });
+      } catch (error) {
+        console.error("Error loading book data:", error);
+        setSelectedBookData(null);
+      }
+    },
+    []
   );
 
   return (
@@ -24,14 +72,11 @@ export const EvalTab: React.FC = () => {
           <div className="h-full flex flex-col">
             <div className="p-4 border-b bg-gray-50">
               <h2 className="text-lg font-semibold text-gray-900">
-                Input Book Evaluations
+                Test Book Evaluations
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                View and analyze evaluation metrics for all input books
-              </p>
             </div>
             <div className="flex-1 min-h-0">
-              <EvalGridMui />
+              <EvalGridMui onRowSelectionChange={handleRowSelectionChange} />
             </div>
           </div>
         </ResizablePanel>
@@ -44,35 +89,22 @@ export const EvalTab: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-900">
                 Evaluation Details
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Detailed analysis and insights
-              </p>
             </div>
-            <div className="flex-1 p-4 overflow-auto">
-              <div className="text-center text-gray-500 mt-8">
-                <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-lg font-medium mb-2">
-                  Select an input book
-                </h3>
-                <p className="text-sm">
-                  Choose an input book from the grid to view detailed evaluation
-                  metrics, comparison charts, and improvement suggestions.
-                </p>
-              </div>
 
-              {/* Placeholder content for future implementation */}
-              <div className="mt-8 space-y-4 opacity-50">
-                <div className="bg-gray-100 h-32 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-500">Accuracy Chart</span>
-                </div>
-                <div className="bg-gray-100 h-32 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-500">Fluency Analysis</span>
-                </div>
-                <div className="bg-gray-100 h-32 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-500">Coherence Metrics</span>
+            {selectedBookData ? (
+              <FieldView
+                correctFieldSetId={selectedBookData.correctFieldSetId}
+                resultFieldSetId={selectedBookData.recentRunFieldSetId}
+              />
+            ) : (
+              <div className="flex-1 p-4 overflow-auto">
+                <div className="text-center text-gray-500 mt-8">
+                  <h3 className="text-lg font-medium mb-2">
+                    Select a test book
+                  </h3>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
