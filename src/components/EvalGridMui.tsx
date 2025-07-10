@@ -323,7 +323,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
     },
     {
       field: "score",
-      headerName: "Score",
+      headerName: "% Match",
       width: 100,
       type: "number",
       align: "center",

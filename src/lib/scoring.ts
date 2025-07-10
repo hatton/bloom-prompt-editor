@@ -6,8 +6,8 @@ import type { Tables } from "@/integrations/supabase/types";
 type FieldSet = Tables<"field-set">;
 
 /**
- * Calculate the score for an test book by comparing correct answers to the most recent run's discovered fields.
- * Returns the score (positive for matches, negative for mismatches) or undefined if no correct answers are available.
+ * Calculate the score for a test book by comparing correct answers to the most recent run's discovered fields.
+ * Returns the score as a percentage (0-100) where 100% means all fields match, or undefined if no correct answers are available.
  */
 export async function getScore(
   inputBookId: number
@@ -110,7 +110,26 @@ export async function getScore(
       `[getScore] Metadata fields to compare:`,
       metadataFields.map((f) => f.name)
     );
-    let score = 0;
+
+    // Check if correct field set has any non-empty values
+    const hasValidCorrectAnswers = metadataFields.some((field) => {
+      const correctValue = correctFieldSet[field.name] as string | null;
+      return (
+        correctValue !== null &&
+        correctValue !== undefined &&
+        correctValue.trim() !== ""
+      );
+    });
+
+    if (!hasValidCorrectAnswers) {
+      console.log(
+        `[getScore] No valid correct answers found in field set, returning undefined`
+      );
+      return undefined;
+    }
+
+    let correctFields = 0;
+    let totalFields = 0;
 
     // Compare each metadata field
     for (const field of metadataFields) {
@@ -121,12 +140,10 @@ export async function getScore(
         `[getScore] Comparing field '${field.name}': correct='${correctValue}', discovered='${discoveredValue}'`
       );
 
-      // Only score fields that have correct answers
-      if (
-        correctValue !== null &&
-        correctValue !== undefined &&
-        correctValue.trim() !== ""
-      ) {
+      // Count all fields that have correct answers (including empty strings)
+      if (correctValue !== null && correctValue !== undefined) {
+        totalFields++;
+
         // Normalize values for comparison (trim whitespace, case-insensitive)
         const normalizedCorrect = correctValue.trim().toLowerCase();
         const normalizedDiscovered = (discoveredValue || "")
@@ -138,14 +155,13 @@ export async function getScore(
         );
 
         if (normalizedCorrect === normalizedDiscovered) {
-          score += 1; // Match: +1 point
+          correctFields++;
           console.log(
-            `[getScore] ✓ Match for '${field.name}': +1 point (total: ${score})`
+            `[getScore] ✓ Match for '${field.name}': correct fields: ${correctFields}/${totalFields}`
           );
         } else {
-          score -= 1; // Mismatch: -1 point
           console.log(
-            `[getScore] ✗ Mismatch for '${field.name}': -1 point (total: ${score})`
+            `[getScore] ✗ Mismatch for '${field.name}': correct fields: ${correctFields}/${totalFields}`
           );
         }
       } else {
@@ -155,8 +171,13 @@ export async function getScore(
       }
     }
 
-    console.log(`[getScore] Final score: ${score}`);
-    return score;
+    // Calculate percentage score
+    const percentageScore =
+      totalFields > 0 ? Math.round((correctFields / totalFields) * 100) : 0;
+    console.log(
+      `[getScore] Final score: ${correctFields}/${totalFields} = ${percentageScore}%`
+    );
+    return percentageScore;
   } catch (error) {
     console.error("[getScore] Error calculating score:", error);
     return undefined;
