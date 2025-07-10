@@ -7,6 +7,7 @@ import {
 import { EvalGridMui } from "@/components/EvalGridMui";
 import { FieldView } from "@/components/FieldView";
 import { ModelChooser } from "@/components/ModelChooser";
+import { PromptChooser } from "@/components/PromptChooser";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { getMostRecentRunFieldSetId } from "@/lib/runUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -78,7 +79,10 @@ export const EvalTab: React.FC = () => {
               <h2 className="text-lg font-semibold text-gray-900">
                 Test Book Evaluations
               </h2>
-              <ModelChooser className="ml-auto" />
+              <div className="flex items-center space-x-3">
+                <PromptChooser placeholder="Select prompt..." />
+                <ModelChooser className="ml-auto" />
+              </div>
             </div>
             <div className="flex-1 min-h-0">
               <EvalGridMui onRowSelectionChange={handleRowSelectionChange} />
