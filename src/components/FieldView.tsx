@@ -118,7 +118,7 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
               
               return (
                 <TableRow key={field.dbFieldName} className={rowClassName}>
-                  <TableCell className="font-medium">{field.label}</TableCell>
+                  <TableCell className="font-medium w-[200px]">{field.label}</TableCell>
                   <TableCell className="max-w-[300px] break-words">
                     {correctValue || <span className="text-muted-foreground italic"></span>}
                   </TableCell>

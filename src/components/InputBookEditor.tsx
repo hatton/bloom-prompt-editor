@@ -286,11 +286,8 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-gray-200">
+      <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold text-gray-900">
-            Edit Input
-          </h2>
           {hasUnsavedChanges && (
             <span className="text-sm text-amber-600">
               Unsaved changes
@@ -298,17 +295,14 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Label
-          </label>
-          <div className="relative w-[20em]">
+        <div className="mb-4">
+          <div className="relative w-[40em] font-bold">
             <Input
               value={currentLabel}
               onChange={(e) => handleLabelChange(e.target.value)}
               onBlur={handleLabelBlur}
               placeholder="Enter input label..."
-              className="w-full"
+              className="w-full font-bold"
             />
             {/* Toast for Label field */}
             {toastFieldType === "label" && (
@@ -335,103 +329,113 @@ export const InputBookEditor = ({ inputId, onInputUpdate }: InputBookEditorProps
         </div>
       </div>
 
-      <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
-        {/* OCR Markdown Section */}
-        <div className="flex flex-col min-h-[200px]">
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">
-              OCR Markdown
-            </label>
-            <Button variant="outline" size="sm" onClick={handlePaste}>
-              <Clipboard className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="relative flex-1 flex">
-            <Textarea
-              value={currentMarkdown}
-              onChange={(e) => handleMarkdownChange(e.target.value)}
-              onBlur={handleMarkdownBlur}
-              placeholder="Enter your OCR markdown content here..."
-              className="flex-1 resize-none font-mono text-sm min-h-[200px]"
-            />
-            {/* Toast for OCR Markdown field */}
-            {toastFieldType === "ocr_markdown" && (
-              <div className="absolute bottom-2 right-2 z-10">
-                {showSavedToast && (
-                  <InlineToast
-                    title={savedToastMessage}
-                    variant="default"
-                    duration={2000}
-                    onClose={handleToastClose}
-                  />
-                )}
-                {showErrorToast && (
-                  <InlineToast
-                    title={errorToastMessage}
-                    variant="destructive"
-                    duration={3000}
-                    onClose={handleToastClose}
-                  />
+      <div className="flex-1 overflow-y-auto px-6">
+        <div className="space-y-6 ">
+          {/* OCR Markdown and Reference Markdown Side by Side */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* OCR Markdown Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">
+                  OCR Markdown
+                </label>
+                <Button variant="outline" size="sm" onClick={handlePaste}>
+                  <Clipboard className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="relative">
+                <Textarea
+                  value={currentMarkdown}
+                  onChange={(e) => handleMarkdownChange(e.target.value)}
+                  onBlur={handleMarkdownBlur}
+                  placeholder="Enter your OCR markdown content here..."
+                  className="resize-none font-mono text-sm h-[400px]"
+                />
+                {/* Toast for OCR Markdown field */}
+                {toastFieldType === "ocr_markdown" && (
+                  <div className="absolute bottom-2 right-2 z-10">
+                    {showSavedToast && (
+                      <InlineToast
+                        title={savedToastMessage}
+                        variant="default"
+                        duration={2000}
+                        onClose={handleToastClose}
+                      />
+                    )}
+                    {showErrorToast && (
+                      <InlineToast
+                        title={errorToastMessage}
+                        variant="destructive"
+                        duration={3000}
+                        onClose={handleToastClose}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Reference Markdown Section */}
-        <div className="flex flex-col min-h-[200px]">
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Optional Reference Markdown (i.e. the "correct" answer)
-            </label>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleReferencePaste}
-            >
-              <Clipboard className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="relative flex-1 flex">
-            <Textarea
-              value={currentReferenceMarkdown}
-              onChange={(e) =>
-                handleReferenceMarkdownChange(e.target.value)
-              }
-              onBlur={handleReferenceMarkdownBlur}
-              placeholder="Enter your reference markdown content here..."
-              className="flex-1 resize-none font-mono text-sm min-h-[200px]"
-            />
-            {/* Toast for Reference Markdown field */}
-            {toastFieldType === "reference_markdown" && (
-              <div className="absolute bottom-2 right-2 z-10">
-                {showSavedToast && (
-                  <InlineToast
-                    title={savedToastMessage}
-                    variant="default"
-                    duration={2000}
-                    onClose={handleToastClose}
-                  />
-                )}
-                {showErrorToast && (
-                  <InlineToast
-                    title={errorToastMessage}
-                    variant="destructive"
-                    duration={3000}
-                    onClose={handleToastClose}
-                  />
+            {/* Reference Markdown Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">
+                  Optional Reference Markdown (i.e. the "correct" answer)
+                </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReferencePaste}
+                >
+                  <Clipboard className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="relative">
+                <Textarea
+                  value={currentReferenceMarkdown}
+                  onChange={(e) =>
+                    handleReferenceMarkdownChange(e.target.value)
+                  }
+                  onBlur={handleReferenceMarkdownBlur}
+                  placeholder="Enter your reference markdown content here..."
+                  className="resize-none font-mono text-sm h-[400px]"
+                />
+                {/* Toast for Reference Markdown field */}
+                {toastFieldType === "reference_markdown" && (
+                  <div className="absolute bottom-2 right-2 z-10">
+                    {showSavedToast && (
+                      <InlineToast
+                        title={savedToastMessage}
+                        variant="default"
+                        duration={2000}
+                        onClose={handleToastClose}
+                      />
+                    )}
+                    {showErrorToast && (
+                      <InlineToast
+                        title={errorToastMessage}
+                        variant="destructive"
+                        duration={3000}
+                        onClose={handleToastClose}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+            </div>
+          </div>
+
+          {/* Field Set Section */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Correct Fields
+            </label>
+            <FieldSetEditor
+              selectedInputId={inputId}
+              fieldSetId={input?.correct_fields || null}
+              onFieldSetUpdate={handleFieldSetUpdate}
+            />
           </div>
         </div>
-
-        {/* Field Set Section */}
-        <FieldSetEditor
-          selectedInputId={inputId}
-          fieldSetId={input?.correct_fields || null}
-          onFieldSetUpdate={handleFieldSetUpdate}
-        />
       </div>
     </div>
   );

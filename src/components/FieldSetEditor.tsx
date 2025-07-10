@@ -167,11 +167,8 @@ export const FieldSetEditor = ({
   };
 
   return (
-    <Card className="p-4 bg-gray-50">
+    <Card className="p-4 bg-gray-50 mt-0">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-900">
-          Correct Fields
-        </h3>
         <div className="flex items-center gap-2">
           {hasUnsavedFieldSetChanges && (
             <span className="text-sm text-amber-600">
