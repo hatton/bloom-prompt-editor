@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RunsTab } from "@/components/RunsTab";
 import { InputBooksTab } from "@/components/InputBooksTab";
 import { SettingsTab } from "@/components/SettingsTab";
+import { EvalTab } from "@/components/EvalTab";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const Index = () => {
@@ -36,7 +37,7 @@ const Index = () => {
             <TabsList className="flex justify-start bg-gray-100 p-0 border-b border-gray-200 flex-shrink-0 w-full">
               <TabsTrigger
                 value="settings"
-                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-black data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50"
+                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-blue-600 data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50"
               >
                 Settings
               </TabsTrigger>
@@ -50,9 +51,16 @@ const Index = () => {
               <TabsTrigger
                 value="runs"
                 disabled={!isReady}
-                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-black data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-blue-600 data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
               >
                 Runs
+              </TabsTrigger>
+              <TabsTrigger
+                value="evals"
+                disabled={!isReady}
+                className="font-bold px-6 py-3 bg-transparent  mr-1 data-[state=active]:bg-card  data-[state=active]:border-b-white data-[state=active]:text-blue-600 data-[state=active]:relative data-[state=active]:z-10 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                Evals
               </TabsTrigger>
             </TabsList>
             <TabsContent value="settings" className="p-0 mt-0 flex-1 min-h-0">
@@ -67,6 +75,10 @@ const Index = () => {
 
             <TabsContent value="runs" className="p-0 mt-0 flex-1 min-h-0">
               <RunsTab />
+            </TabsContent>
+
+            <TabsContent value="evals" className="p-0 mt-0 flex-1 min-h-0">
+              <EvalTab />
             </TabsContent>
           </Tabs>
         </div>
