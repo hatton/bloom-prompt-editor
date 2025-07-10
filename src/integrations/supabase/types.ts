@@ -4,344 +4,355 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
-/**
- * Field value conventions for field-set table:
- * - null: Unknown/missing data (not counted in field counts)
- * - "empty": Intentionally left empty (counted as filled field)
- * - any other string: Actual field content (counted as filled field)
- */
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       "book-input": {
         Row: {
-          created_at: string;
-          id: number;
-          label: string | null;
-          ocr_markdown: string | null;
-          reference_markdown: string | null;
-          correct_fields: number | null;
-        };
+          correct_fields: number | null
+          created_at: string
+          id: number
+          label: string | null
+          ocr_markdown: string | null
+          reference_markdown: string | null
+        }
         Insert: {
-          created_at?: string;
-          id?: number;
-          label?: string | null;
-          ocr_markdown?: string | null;
-          reference_markdown?: string | null;
-          correct_fields?: number | null;
-        };
+          correct_fields?: number | null
+          created_at?: string
+          id?: number
+          label?: string | null
+          ocr_markdown?: string | null
+          reference_markdown?: string | null
+        }
         Update: {
-          created_at?: string;
-          id?: number;
-          label?: string | null;
-          ocr_markdown?: string | null;
-          reference_markdown?: string | null;
-          correct_fields?: number | null;
-        };
+          correct_fields?: number | null
+          created_at?: string
+          id?: number
+          label?: string | null
+          ocr_markdown?: string | null
+          reference_markdown?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "book-input_correct_fields_fkey";
-            columns: ["correct_fields"];
-            isOneToOne: false;
-            referencedRelation: "field-set";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
+            foreignKeyName: "book-input_correct_fields_fkey"
+            columns: ["correct_fields"]
+            isOneToOne: false
+            referencedRelation: "field-set"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       "field-set": {
         Row: {
-          copyright: string | null;
-          created_at: string;
-          id: number;
-          title_l1: string | null;
-          title_l2: string | null;
-          license_url: string | null;
-          isbn: string | null;
-          licenseDescription: string | null;
-          licenseNotes: string | null;
-          originalCopyright: string | null;
-          smallCoverCredits: string | null;
-          topic: string | null;
-          credits: string | null;
-          versionAcknowledgments: string | null;
-          originalContributions: string | null;
-          originalAcknowledgments: string | null;
-          funding: string | null;
-          country: string | null;
-          province: string | null;
-          district: string | null;
-          author: string | null;
-          illustrator: string | null;
-          publisher: string | null;
-          originalPublisher: string | null;
-        };
+          author: string | null
+          copyright: string | null
+          country: string | null
+          created_at: string
+          credits: string | null
+          district: string | null
+          funding: string | null
+          id: number
+          illustrator: string | null
+          isbn: string | null
+          license_url: string | null
+          licenseDescription: string | null
+          licenseNotes: string | null
+          originalAcknowledgments: string | null
+          originalContributions: string | null
+          originalCopyright: string | null
+          originalPublisher: string | null
+          province: string | null
+          publisher: string | null
+          smallCoverCredits: string | null
+          title_l1: string | null
+          title_l2: string | null
+          topic: string | null
+          versionAcknowledgments: string | null
+        }
         Insert: {
-          copyright?: string | null;
-          created_at?: string;
-          id?: number;
-          title_l1?: string | null;
-          title_l2?: string | null;
-          license_url?: string | null;
-          isbn?: string | null;
-          licenseDescription?: string | null;
-          licenseNotes?: string | null;
-          originalCopyright?: string | null;
-          smallCoverCredits?: string | null;
-          topic?: string | null;
-          credits?: string | null;
-          versionAcknowledgments?: string | null;
-          originalContributions?: string | null;
-          originalAcknowledgments?: string | null;
-          funding?: string | null;
-          country?: string | null;
-          province?: string | null;
-          district?: string | null;
-          author?: string | null;
-          illustrator?: string | null;
-          publisher?: string | null;
-          originalPublisher?: string | null;
-        };
+          author?: string | null
+          copyright?: string | null
+          country?: string | null
+          created_at?: string
+          credits?: string | null
+          district?: string | null
+          funding?: string | null
+          id?: number
+          illustrator?: string | null
+          isbn?: string | null
+          license_url?: string | null
+          licenseDescription?: string | null
+          licenseNotes?: string | null
+          originalAcknowledgments?: string | null
+          originalContributions?: string | null
+          originalCopyright?: string | null
+          originalPublisher?: string | null
+          province?: string | null
+          publisher?: string | null
+          smallCoverCredits?: string | null
+          title_l1?: string | null
+          title_l2?: string | null
+          topic?: string | null
+          versionAcknowledgments?: string | null
+        }
         Update: {
-          copyright?: string | null;
-          created_at?: string;
-          id?: number;
-          title_l1?: string | null;
-          title_l2?: string | null;
-          license_url?: string | null;
-          isbn?: string | null;
-          licenseDescription?: string | null;
-          licenseNotes?: string | null;
-          originalCopyright?: string | null;
-          smallCoverCredits?: string | null;
-          topic?: string | null;
-          credits?: string | null;
-          versionAcknowledgments?: string | null;
-          originalContributions?: string | null;
-          originalAcknowledgments?: string | null;
-          funding?: string | null;
-          country?: string | null;
-          province?: string | null;
-          district?: string | null;
-          author?: string | null;
-          illustrator?: string | null;
-          publisher?: string | null;
-          originalPublisher?: string | null;
-        };
-        Relationships: [];
-      };
+          author?: string | null
+          copyright?: string | null
+          country?: string | null
+          created_at?: string
+          credits?: string | null
+          district?: string | null
+          funding?: string | null
+          id?: number
+          illustrator?: string | null
+          isbn?: string | null
+          license_url?: string | null
+          licenseDescription?: string | null
+          licenseNotes?: string | null
+          originalAcknowledgments?: string | null
+          originalContributions?: string | null
+          originalCopyright?: string | null
+          originalPublisher?: string | null
+          province?: string | null
+          publisher?: string | null
+          smallCoverCredits?: string | null
+          title_l1?: string | null
+          title_l2?: string | null
+          topic?: string | null
+          versionAcknowledgments?: string | null
+        }
+        Relationships: []
+      }
       prompt: {
         Row: {
-          created_at: string;
-          id: number;
-          label: string | null;
-          notes: string | null;
-          user_prompt: string | null;
-          temperature: number | null;
-        };
+          created_at: string
+          id: number
+          label: string | null
+          notes: string | null
+          temperature: number | null
+          user_prompt: string | null
+        }
         Insert: {
-          created_at?: string;
-          id?: number;
-          label?: string | null;
-          notes?: string | null;
-          user_prompt?: string | null;
-          temperature?: number | null;
-        };
+          created_at?: string
+          id?: number
+          label?: string | null
+          notes?: string | null
+          temperature?: number | null
+          user_prompt?: string | null
+        }
         Update: {
-          created_at?: string;
-          id?: number;
-          label?: string | null;
-          notes?: string | null;
-          user_prompt?: string | null;
-          temperature?: number | null;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          id?: number
+          label?: string | null
+          notes?: string | null
+          temperature?: number | null
+          user_prompt?: string | null
+        }
+        Relationships: []
+      }
       run: {
         Row: {
-          book_input_id: number | null;
-          created_at: string;
-          human_tags: string[] | null;
-          id: number;
-          notes: string | null;
-          output: string | null;
-          prompt_id: number | null;
-          discovered_fields: number | null;
-          model: string | null;
-          temperature: number | null;
-        };
+          book_input_id: number | null
+          created_at: string
+          discovered_fields: number | null
+          human_tags: string[] | null
+          id: number
+          model: string | null
+          notes: string | null
+          output: string | null
+          prompt_id: number | null
+          temperature: number | null
+        }
         Insert: {
-          book_input_id?: number | null;
-          created_at?: string;
-          human_tags?: string[] | null;
-          id?: number;
-          notes?: string | null;
-          output?: string | null;
-          prompt_id?: number | null;
-          discovered_fields?: number | null;
-          model?: string | null;
-          temperature?: number | null;
-        };
+          book_input_id?: number | null
+          created_at?: string
+          discovered_fields?: number | null
+          human_tags?: string[] | null
+          id?: number
+          model?: string | null
+          notes?: string | null
+          output?: string | null
+          prompt_id?: number | null
+          temperature?: number | null
+        }
         Update: {
-          book_input_id?: number | null;
-          created_at?: string;
-          human_tags?: string[] | null;
-          id?: number;
-          notes?: string | null;
-          output?: string | null;
-          prompt_id?: number | null;
-          discovered_fields?: number | null;
-          model?: string | null;
-          temperature?: number | null;
-        };
+          book_input_id?: number | null
+          created_at?: string
+          discovered_fields?: number | null
+          human_tags?: string[] | null
+          id?: number
+          model?: string | null
+          notes?: string | null
+          output?: string | null
+          prompt_id?: number | null
+          temperature?: number | null
+        }
         Relationships: [
           {
-            foreignKeyName: "run_book_input_id_fkey";
-            columns: ["book_input_id"];
-            isOneToOne: false;
-            referencedRelation: "book-input";
-            referencedColumns: ["id"];
+            foreignKeyName: "run_book_input_id_fkey"
+            columns: ["book_input_id"]
+            isOneToOne: false
+            referencedRelation: "book-input"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "run_discovered_fields_fkey";
-            columns: ["discovered_fields"];
-            isOneToOne: false;
-            referencedRelation: "field-set";
-            referencedColumns: ["id"];
+            foreignKeyName: "run_discovered_fields_fkey"
+            columns: ["discovered_fields"]
+            isOneToOne: false
+            referencedRelation: "field-set"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "run_prompt_id_fkey";
-            columns: ["prompt_id"];
-            isOneToOne: false;
-            referencedRelation: "prompt";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-    };
+            foreignKeyName: "run_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "prompt"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type DefaultSchema = Database[Extract<keyof Database, "public">];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
     }
     ? R
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-      DefaultSchema["Views"])
-  ? (DefaultSchema["Tables"] &
-      DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-      Row: infer R;
-    }
-    ? R
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-      Insert: infer I;
-    }
-    ? I
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-      Update: infer U;
-    }
-    ? U
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database;
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-  : never;
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database;
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-  : never;
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const;
+} as const
