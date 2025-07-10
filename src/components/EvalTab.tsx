@@ -4,7 +4,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { EvalGrid } from "@/components/EvalGrid";
+import { EvalGridMui } from "@/components/EvalGridMui";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 export const EvalTab: React.FC = () => {
@@ -31,7 +31,7 @@ export const EvalTab: React.FC = () => {
               </p>
             </div>
             <div className="flex-1 min-h-0">
-              <EvalGrid />
+              <EvalGridMui />
             </div>
           </div>
         </ResizablePanel>

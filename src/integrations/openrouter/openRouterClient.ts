@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import {
   generateText,
   streamText,
@@ -6,7 +5,6 @@ import {
   CoreSystemMessage,
 } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { max } from "date-fns";
 
 interface OpenRouterModel {
   id: string;
