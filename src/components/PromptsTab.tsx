@@ -45,9 +45,9 @@ export const PromptsTab = () => {
     "currentPromptId",
     null
   );
-  const [selectedInputId, setSelectedInputId] = useLocalStorage<string>(
-    "selectedInputId",
-    ""
+  const [selectedBookId, setSelectedBookId] = useLocalStorage<number | null>(
+    "selectedBookId",
+    null
   );
   const [selectedModel, setSelectedModel] = useLocalStorage<string>(
     "selectedModel",
@@ -92,7 +92,7 @@ export const PromptsTab = () => {
       try {
         setNotes(run.notes || "");
         setOutput(run.output || "");
-        setSelectedInputId(run.book_input_id?.toString() || "");
+        setSelectedBookId(run.book_input_id || null);
         setIsStarred(run.human_tags?.includes("star") || false);
 
         // Load run-specific settings
@@ -134,12 +134,12 @@ export const PromptsTab = () => {
         console.error("Error loading run:", error);
       }
     },
-    [setSelectedInputId, setCurrentPromptId, setSelectedModel]
+    [setSelectedBookId, setCurrentPromptId, setSelectedModel]
   );
 
   useEffect(() => {
     const findAndLoadRun = async () => {
-      if (!selectedInputId || !currentPromptId) {
+      if (!selectedBookId || !currentPromptId) {
         setOutput("");
         setNotes("");
         setPromptParams({});
@@ -151,11 +151,25 @@ export const PromptsTab = () => {
       }
 
       try {
+        const bookInputId = selectedBookId;
+
+        if (!bookInputId) {
+          // No book selected, clear the output
+          setOutput("");
+          setNotes("");
+          setPromptParams({});
+          setFinishReason(null);
+          setUsage(null);
+          setIsStarred(false);
+          setWaitingForRun(false);
+          return;
+        }
+
         const { data: run, error } = await supabase
           .from("run")
           .select("*")
           .eq("prompt_id", currentPromptId)
-          .eq("book_input_id", parseInt(selectedInputId, 10))
+          .eq("book_input_id", bookInputId)
           .eq("temperature", promptSettings.temperature)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -194,7 +208,7 @@ export const PromptsTab = () => {
 
     findAndLoadRun();
   }, [
-    selectedInputId,
+    selectedBookId,
     currentPromptId,
     promptSettings.temperature,
     runs,
@@ -271,14 +285,14 @@ export const PromptsTab = () => {
   // Auto-switch to "input" if "reference" is selected but no reference markdown exists
   useEffect(() => {
     const selectedInput = bookInputs.find(
-      (input) => input.id.toString() === selectedInputId
+      (input) => input.id === selectedBookId
     );
     const hasRefMarkdown = !!selectedInput?.reference_markdown;
 
     if (comparisonMode === "reference" && !hasRefMarkdown) {
       setComparisonMode("input");
     }
-  }, [selectedInputId, bookInputs, comparisonMode, setComparisonMode]);
+  }, [selectedBookId, bookInputs, comparisonMode, setComparisonMode]);
 
   // // Save prompt when component unmounts or user navigates away
   // useEffect(() => {
@@ -419,7 +433,7 @@ export const PromptsTab = () => {
   const handleRun = async () => {
     setWaitingForRun(false);
     setFinishReason(null);
-    if (!selectedInputId) {
+    if (!selectedBookId) {
       toast({
         title: "Please select an input",
         variant: "destructive",
@@ -447,7 +461,7 @@ export const PromptsTab = () => {
       const promptId = await saveNewPromptIfChanged();
 
       const selectedInput = bookInputs.find(
-        (input) => input.id.toString() === selectedInputId
+        (input) => input.id === selectedBookId
       );
 
       if (!selectedInput) {
@@ -553,7 +567,7 @@ export const PromptsTab = () => {
           .from("run")
           .insert({
             prompt_id: promptId,
-            book_input_id: parseInt(selectedInputId),
+            book_input_id: selectedBookId!,
             output: fullResult,
             temperature: promptSettings.temperature,
             model: selectedModel,
@@ -621,9 +635,7 @@ export const PromptsTab = () => {
   const canGoNext = currentRunIndex < runs.length - 1;
 
   // Check if the selected input has reference markdown
-  const selectedInput = bookInputs.find(
-    (input) => input.id.toString() === selectedInputId
-  );
+  const selectedInput = bookInputs.find((input) => input.id === selectedBookId);
 
   // Auto-switch to "input" if "reference" is selected but no reference markdown exists
   useEffect(() => {
@@ -632,7 +644,7 @@ export const PromptsTab = () => {
       setComparisonMode("input");
     }
   }, [
-    selectedInputId,
+    selectedBookId,
     selectedInput?.reference_markdown,
     comparisonMode,
     setComparisonMode,
@@ -649,11 +661,10 @@ export const PromptsTab = () => {
   }
 
   const markdownOfSelectedInput =
-    bookInputs.find((input) => input.id.toString() === selectedInputId)
-      ?.ocr_markdown || "";
+    bookInputs.find((input) => input.id === selectedBookId)?.ocr_markdown || "";
 
   const referenceMarkdown =
-    bookInputs.find((input) => input.id.toString() === selectedInputId)
+    bookInputs.find((input) => input.id === selectedBookId)
       ?.reference_markdown || "";
 
   const hasReferenceMarkdown = !!referenceMarkdown;
@@ -686,8 +697,10 @@ export const PromptsTab = () => {
                 <h3 className="text-lg font-bold text-gray-900">Input</h3>
 
                 <Select
-                  value={selectedInputId}
-                  onValueChange={setSelectedInputId}
+                  value={selectedBookId?.toString() || ""}
+                  onValueChange={(value) =>
+                    setSelectedBookId(value ? parseInt(value, 10) : null)
+                  }
                 >
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Select input..." />
@@ -733,7 +746,7 @@ export const PromptsTab = () => {
               selectedModel={selectedModel}
               comparisonMode={comparisonMode}
               hasReferenceMarkdown={hasReferenceMarkdown}
-              selectedInputId={selectedInputId}
+              selectedBookId={selectedBookId?.toString() || null}
               markdownOfSelectedInput={markdownOfSelectedInput}
               referenceMarkdown={referenceMarkdown}
               onRun={handleRun}

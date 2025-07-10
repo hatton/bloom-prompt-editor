@@ -16,7 +16,10 @@ export const EvalTab: React.FC = () => {
     [60, 40]
   );
 
-  const [selectedBookId, setSelectedBookId] = useState<number | null>(null);
+  const [selectedBookId, setSelectedBookId] = useLocalStorage<number | null>(
+    "selectedBookId",
+    null
+  );
   const [selectedBookData, setSelectedBookData] = useState<{
     correctFieldSetId: number | null;
     recentRunFieldSetId: number | null;
@@ -58,7 +61,7 @@ export const EvalTab: React.FC = () => {
         setSelectedBookData(null);
       }
     },
-    []
+    [setSelectedBookId]
   );
 
   return (

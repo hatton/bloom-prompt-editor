@@ -109,6 +109,12 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
   const [selectedRowId, setSelectedRowId] = useState<number[]>([]);
   const { toast } = useToast();
 
+  // Read the current selectedBookId from localStorage to sync with other tabs
+  const [selectedBookId] = useLocalStorage<number | null>(
+    "selectedBookId",
+    null
+  );
+
   // Store grid state in localStorage
   const [gridState, setGridState] = useLocalStorage<EvalGridState>(
     "evalGridMuiState",
@@ -188,6 +194,27 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
   useEffect(() => {
     loadBookInputs();
   }, [loadBookInputs]);
+
+  // Sync grid selection with the selectedBookId from localStorage
+  useEffect(() => {
+    if (selectedBookId && data.length > 0) {
+      // Check if the selectedBookId exists in the current data
+      const bookExists = data.find((book) => book.id === selectedBookId);
+      if (bookExists) {
+        setSelectedRowId([selectedBookId]);
+        // Notify parent component about the selection
+        onRowSelectionChange?.(selectedBookId);
+      } else {
+        // If book doesn't exist, clear selection
+        setSelectedRowId([]);
+        onRowSelectionChange?.(null);
+      }
+    } else if (data.length > 0) {
+      // Clear selection if no selectedBookId
+      setSelectedRowId([]);
+      onRowSelectionChange?.(null);
+    }
+  }, [selectedBookId, data, onRowSelectionChange]);
 
   // Define columns
   const columns: GridColDef[] = [
@@ -413,6 +440,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
         onSortModelChange={setSortModel}
         columnVisibilityModel={columnVisibilityModel}
         onColumnVisibilityModelChange={setColumnVisibilityModel}
+        rowSelectionModel={{ type: "include", ids: new Set(selectedRowId) }}
         onRowSelectionModelChange={handleRowSelection}
         slots={{
           toolbar: GridToolbar,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PromptsTab } from "@/components/PromptsTab";
-import { InputBooksTab } from "@/components/InputBooksTab";
+import { TestBooksTab } from "@/components/TestBooksTab";
 import { SettingsTab } from "@/components/SettingsTab";
 import { EvalTab } from "@/components/EvalTab";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -70,7 +70,7 @@ const Index = () => {
               value="input-books"
               className="p-0 mt-0 flex-1 min-h-0"
             >
-              <InputBooksTab />
+              <TestBooksTab />
             </TabsContent>
 
             <TabsContent value="runs" className="p-0 mt-0 flex-1 min-h-0">

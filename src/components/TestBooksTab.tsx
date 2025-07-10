@@ -6,14 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { InputBookEditor } from "@/components/InputBookEditor";
+import { InputBookEditor } from "@/components/TestBookEditor";
 
 type BookInput = Tables<"book-input">;
 
-export const InputBooksTab = () => {
+export const TestBooksTab = () => {
   const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
-  const [selectedInputId, setSelectedInputId] = useLocalStorage<number | null>(
-    "lastSelectedInputBook",
+  const [selectedBookId, setSelectedBookId] = useLocalStorage<number | null>(
+    "selectedBookId",
     null
   );
   const [loading, setLoading] = useState(true);
@@ -36,8 +36,8 @@ export const InputBooksTab = () => {
       });
 
       setBookInputs(sortedData);
-      if (sortedData && sortedData.length > 0 && !selectedInputId) {
-        setSelectedInputId(sortedData[0].id);
+      if (sortedData && sortedData.length > 0 && !selectedBookId) {
+        setSelectedBookId(sortedData[0].id);
       }
     } catch (error) {
       console.error("Error loading book inputs:", error);
@@ -48,7 +48,7 @@ export const InputBooksTab = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedInputId, setSelectedInputId, toast]);
+  }, [selectedBookId, setSelectedBookId, toast]);
 
   // Load book inputs from Supabase
   useEffect(() => {
@@ -79,7 +79,7 @@ export const InputBooksTab = () => {
           return labelA.localeCompare(labelB);
         });
       });
-      setSelectedInputId(data.id);
+      setSelectedBookId(data.id);
       toast({
         title: "New input created",
       });
@@ -111,11 +111,11 @@ export const InputBooksTab = () => {
 
       setBookInputs((prev) => prev.filter((input) => input.id !== inputId));
 
-      if (selectedInputId === inputId) {
+      if (selectedBookId === inputId) {
         const remainingInputs = bookInputs.filter(
           (input) => input.id !== inputId
         );
-        setSelectedInputId(remainingInputs[0]?.id || null);
+        setSelectedBookId(remainingInputs[0]?.id || null);
       }
 
       toast({
@@ -131,7 +131,7 @@ export const InputBooksTab = () => {
   };
 
   const handleInputSelection = (inputId: number) => {
-    setSelectedInputId(inputId);
+    setSelectedBookId(inputId);
   };
 
   // Handle input updates from the editor
@@ -184,7 +184,7 @@ export const InputBooksTab = () => {
             <div
               key={input.id}
               className={`px-3 py-2 cursor-pointer transition-all group rounded-md ${
-                selectedInputId === input.id
+                selectedBookId === input.id
                   ? "bg-white border-blue-600 shadow-sm border-2"
                   : "hover:bg-gray-50 border border-transparent"
               }`}
@@ -215,9 +215,9 @@ export const InputBooksTab = () => {
 
       {/* Main Content - Editor */}
       <div className="flex-1 flex flex-col bg-blue-100">
-        {selectedInputId ? (
+        {selectedBookId ? (
           <InputBookEditor
-            inputId={selectedInputId}
+            inputId={selectedBookId}
             onInputUpdate={handleInputUpdate}
           />
         ) : (

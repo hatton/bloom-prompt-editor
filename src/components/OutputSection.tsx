@@ -37,7 +37,7 @@ interface OutputSectionProps {
   comparisonMode: string;
   hasReferenceMarkdown: boolean;
   markdownOfSelectedInput: string;
-  selectedInputId: string;
+  selectedBookId: string | null;
   referenceMarkdown: string;
   promptResult: null | {
     promptParams: unknown;
@@ -62,7 +62,7 @@ export const OutputSection = ({
   selectedModel,
   comparisonMode,
   hasReferenceMarkdown,
-  selectedInputId,
+  selectedBookId,
   markdownOfSelectedInput,
   referenceMarkdown,
   promptResult,
@@ -83,16 +83,25 @@ export const OutputSection = ({
   // Load the correct field set ID from the selected book input
   useEffect(() => {
     const loadCorrectFieldSetId = async () => {
-      if (!selectedInputId) {
+      if (!selectedBookId) {
         setCorrectFieldSetId(null);
         return;
       }
 
       try {
+        const bookInputId = selectedBookId
+          ? parseInt(selectedBookId, 10)
+          : null;
+
+        if (!bookInputId) {
+          setCorrectFieldSetId(null);
+          return;
+        }
+
         const { data: bookInput, error } = await supabase
           .from("book-input")
           .select("correct_fields")
-          .eq("id", parseInt(selectedInputId))
+          .eq("id", bookInputId)
           .single();
 
         if (error) {
@@ -108,7 +117,7 @@ export const OutputSection = ({
     };
 
     loadCorrectFieldSetId();
-  }, [selectedInputId]);
+  }, [selectedBookId]);
 
   const formatRunDate = (timestamp: string) => {
     const date = new Date(timestamp);

@@ -25,6 +25,10 @@ export function useLocalStorage<T>(
 
       // Attempt to parse the value based on the generic type T
       try {
+        console.debug(
+          `useLocalStorage: Reading localStorage key "${key}" = ${item}, parsed as`,
+          JSON.parse(item).toString()
+        );
         return JSON.parse(item) as T;
       } catch {
         // If parsing fails, fallback to defaultValue
@@ -58,6 +62,10 @@ export function useLocalStorage<T>(
       } else {
         try {
           const jsonString = JSON.stringify(value);
+          console.debug(
+            `Setting localStorage key "${key}" with value:`,
+            jsonString
+          );
           localStorage.setItem(key, jsonString);
         } catch (stringifyError) {
           console.warn(
