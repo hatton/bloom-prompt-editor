@@ -93,6 +93,17 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
         setOutput(run.output || "");
         setSelectedInputId(run.book_input_id?.toString() || "");
         setIsStarred(run.human_tags?.includes("star") || false);
+        
+        // Load run-specific settings
+        if (run.model) {
+          setSelectedModel(run.model);
+        }
+        
+        // TODO: Handle discovered_fields when field discovery is implemented
+        // if (run.discovered_fields) {
+        //   // Load and display the discovered field set
+        // }
+        
         setPromptParams({}); // TODO: Should we store and load these?
         setFinishReason(null); // TODO: Should we store and load these?
         setUsage(null); // TODO: Should we store and load these?
@@ -122,7 +133,7 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
         console.error("Error loading run:", error);
       }
     },
-    [setSelectedInputId, setCurrentPromptId]
+    [setSelectedInputId, setCurrentPromptId, setSelectedModel]
   );
 
   useEffect(() => {
@@ -533,6 +544,7 @@ const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
             temperature: promptSettings.temperature,
             model: selectedModel,
             notes: notes,
+            discovered_fields: null, // TODO: probably going to remove this
           })
           .select()
           .single();
