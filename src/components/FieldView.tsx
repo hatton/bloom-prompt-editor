@@ -98,36 +98,90 @@ export const FieldView = ({ output,  currentInputId }: FieldViewProps) => {
         <div className="flex-1 overflow-auto">
           <Table>
             <TableBody>
-            {fieldDefinitions.map((field) => {
-              const correctValue = correctFields?.[field.dbFieldName as keyof FieldSet] as string || "";
-              const extractedValue = extractField(output, field.markdownFieldName || field.dbFieldName);
-              
-              // Determine row background color based on comparison
-              let rowClassName = "";
-              if (correctValue && extractedValue) {
-                // Both values exist - check if they match
-                if (correctValue === extractedValue) {
-                  rowClassName = "bg-green-50"; // Light green for match
-                } else {
-                  rowClassName = "bg-red-50"; // Light red for mismatch
+            {(() => {
+              // Helper function to get the order of fields as they appear in the output
+              const getFieldOrderInOutput = (fieldName: string): number => {
+                if (!output) return 999;
+                const commentRegex = new RegExp(`<!--[^>]*field="${fieldName}"[^>]*-->`, 'i');
+                const match = output.match(commentRegex);
+                return match ? match.index! : 999;
+              };
+
+              // Sort fields by priority:
+              // 1) Correct non-empty, extracted different (mismatches with correct values)
+              // 2) Correct empty, extracted non-empty (unexpected extractions)
+              // 3) Correct and extracted match (successful matches)
+              // 4) Both empty (no data)
+              const sortedFields = [...fieldDefinitions].sort((a, b) => {
+                const aCorrectValue = correctFields?.[a.dbFieldName as keyof FieldSet] as string || "";
+                const bCorrectValue = correctFields?.[b.dbFieldName as keyof FieldSet] as string || "";
+                const aExtractedValue = extractField(output, a.markdownFieldName || a.dbFieldName);
+                const bExtractedValue = extractField(output, b.markdownFieldName || b.dbFieldName);
+                
+                // Helper function to get priority category
+                const getPriority = (correct: string, extracted: string): number => {
+                  const hasCorrect = Boolean(correct);
+                  const hasExtracted = Boolean(extracted);
+                  
+                  if (hasCorrect && hasExtracted && correct !== extracted) return 1; // Mismatch with correct value
+                  if (!hasCorrect && hasExtracted) return 2; // Unexpected extraction
+                  if (hasCorrect && hasExtracted && correct === extracted) return 3; // Match
+                  if (!hasCorrect && !hasExtracted) return 4; // Both empty
+                  if (hasCorrect && !hasExtracted) return 1; // Missing extraction (treat as high priority)
+                  return 5; // Fallback
+                };
+                
+                const aPriority = getPriority(aCorrectValue, aExtractedValue);
+                const bPriority = getPriority(bCorrectValue, bExtractedValue);
+                
+                // Primary sort: by priority category
+                if (aPriority !== bPriority) {
+                  return aPriority - bPriority;
                 }
-              } else if (correctValue && !extractedValue) {
-                // Have correct value but no extracted value
-                rowClassName = "bg-yellow-50"; // Light orange for missing extracted value
-              }
-              
-              return (
-                <TableRow key={field.dbFieldName} className={rowClassName}>
-                  <TableCell className="font-medium w-[200px]">{field.label}</TableCell>
-                  <TableCell className="max-w-[300px] break-words">
-                    {correctValue || <span className="text-muted-foreground italic"></span>}
-                  </TableCell>
-                  <TableCell className="max-w-[300px] break-words">
-                    {extractedValue || <span className="text-muted-foreground italic"></span>}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                
+                // Secondary sort: by order of appearance in output
+                const aOutputOrder = getFieldOrderInOutput(a.markdownFieldName || a.dbFieldName);
+                const bOutputOrder = getFieldOrderInOutput(b.markdownFieldName || b.dbFieldName);
+                
+                if (aOutputOrder !== bOutputOrder) {
+                  return aOutputOrder - bOutputOrder;
+                }
+                
+                // Tertiary sort: by original definition order
+                return fieldDefinitions.indexOf(a) - fieldDefinitions.indexOf(b);
+              });
+
+              return sortedFields.map((field) => {
+                const correctValue = correctFields?.[field.dbFieldName as keyof FieldSet] as string || "";
+                const extractedValue = extractField(output, field.markdownFieldName || field.dbFieldName);
+                
+                // Determine row background color based on comparison
+                let rowClassName = "";
+                if (correctValue && extractedValue) {
+                  // Both values exist - check if they match
+                  if (correctValue === extractedValue) {
+                    rowClassName = "bg-green-50"; // Light green for match
+                  } else {
+                    rowClassName = "bg-red-50"; // Light red for mismatch
+                  }
+                } else if (correctValue && !extractedValue) {
+                  // Have correct value but no extracted value
+                  rowClassName = "bg-yellow-50"; // Light orange for missing extracted value
+                }
+                
+                return (
+                  <TableRow key={field.dbFieldName} className={rowClassName}>
+                    <TableCell className="font-medium w-[200px]">{field.label}</TableCell>
+                    <TableCell className="max-w-[300px] break-words">
+                      {correctValue || <span className="text-muted-foreground italic"></span>}
+                    </TableCell>
+                    <TableCell className="max-w-[300px] break-words">
+                      {extractedValue || <span className="text-muted-foreground italic"></span>}
+                    </TableCell>
+                  </TableRow>
+                );
+              });
+            })()}
           </TableBody>
           </Table>
         </div>
