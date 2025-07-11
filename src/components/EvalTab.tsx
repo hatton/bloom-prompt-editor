@@ -131,7 +131,39 @@ export const EvalTab: React.FC = () => {
 
   // Handle running tests
   const handleRunTests = useCallback(async () => {
-    if (selectedForRun.length === 0) return;
+    // Determine what books to run: either selected checkboxes or the single selected row
+    let booksToRun: Array<{ id: number; label: string | null }> = [];
+
+    if (selectedForRun.length > 0) {
+      // Use checkbox selections
+      booksToRun = selectedBooksData;
+    } else if (selectedBookId) {
+      // Use the single selected row - fetch its data
+      try {
+        const { data: bookData, error } = await supabase
+          .from("book-input")
+          .select("id, label")
+          .eq("id", selectedBookId)
+          .single();
+
+        if (error || !bookData) {
+          console.error("Error fetching selected book data:", error);
+          setRunLog(["❌ Error: Could not fetch selected book data."]);
+          setRunDialogOpen(true);
+          return;
+        }
+
+        booksToRun = [bookData];
+      } catch (error) {
+        console.error("Error fetching selected book data:", error);
+        setRunLog(["❌ Error: Could not fetch selected book data."]);
+        setRunDialogOpen(true);
+        return;
+      }
+    } else {
+      // Nothing to run
+      return;
+    }
 
     // Validate required settings
     if (!openRouterApiKey) {
@@ -163,7 +195,11 @@ export const EvalTab: React.FC = () => {
 
     try {
       const log: string[] = [];
-      log.push(`Starting test run for ${selectedForRun.length} test books...`);
+      log.push(
+        `Starting test run for ${booksToRun.length} test book${
+          booksToRun.length === 1 ? "" : "s"
+        }...`
+      );
       log.push(`Using model: ${selectedModel}`);
       log.push(""); // Empty line for spacing
       setRunLog([...log]);
@@ -193,7 +229,7 @@ export const EvalTab: React.FC = () => {
       };
 
       // Run tests for each selected book
-      for (const bookData of selectedBooksData) {
+      for (const bookData of booksToRun) {
         const label = bookData.label || `Book ${bookData.id}`;
         log.push(`Running test for: ${label}`);
         setRunLog([...log]);
@@ -269,6 +305,7 @@ export const EvalTab: React.FC = () => {
   }, [
     selectedForRun,
     selectedBooksData,
+    selectedBookId,
     openRouterApiKey,
     selectedPromptId,
     selectedModel,
@@ -300,17 +337,24 @@ export const EvalTab: React.FC = () => {
                 Test Book Evaluations
               </h2>
               <div className="flex items-center space-x-3">
+                {" "}
+                <PromptChooser placeholder="Select prompt..." />
+                <ModelChooser className="ml-auto" />
                 <Button
                   onClick={handleRunTests}
-                  disabled={selectedForRun.length === 0}
+                  disabled={selectedForRun.length === 0 && !selectedBookId}
                   variant="default"
                   size="sm"
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  Run ({selectedForRun.length})
+                  Run (
+                  {selectedForRun.length > 0
+                    ? selectedForRun.length
+                    : selectedBookId
+                    ? 1
+                    : 0}
+                  )
                 </Button>
-                <PromptChooser placeholder="Select prompt..." />
-                <ModelChooser className="ml-auto" />
               </div>
             </div>
             <div className="flex-1 min-h-0">
