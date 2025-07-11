@@ -30,6 +30,7 @@ interface InputBookWithComputedFields extends BookInput {
   score: number | undefined;
   correctFields: FieldSet | null;
   lastTestDate: Date | null;
+  runFields: FieldSet | null; // Fields from the most recent run
 }
 
 // Helper function to count words in markdown
@@ -184,6 +185,18 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             correctFields = fieldSetData;
           }
 
+          // Get run field-set data from the most recent run
+          let runFields = null;
+          const recentRunFieldSetId = await getMostRecentRunFieldSetId(book.id);
+          if (recentRunFieldSetId) {
+            const { data: runFieldSetData } = await supabase
+              .from("field-set")
+              .select("*")
+              .eq("id", recentRunFieldSetId)
+              .single();
+            runFields = runFieldSetData;
+          }
+
           // Calculate score
           const score = book.id === 10 ? await getScore(book.id) : undefined;
 
@@ -210,6 +223,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             wordCount: countWords(book.ocr_markdown),
             score,
             correctFields,
+            runFields,
             lastTestDate,
           };
         })
@@ -436,6 +450,20 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
         const correctFields = (row as InputBookWithComputedFields)
           .correctFields;
         return correctFields ? correctFields[field.name] : null;
+      },
+      valueFormatter: (value) => formatFieldValue(value, String(field.name)),
+    });
+  });
+
+  // Add run field columns (showing values from the currently selected run)
+  metadataFields.forEach((field) => {
+    columns.push({
+      field: `run_${String(field.name)}`,
+      headerName: `Run: ${field.label}`,
+      width: 150,
+      valueGetter: (value, row) => {
+        const runFields = (row as InputBookWithComputedFields).runFields;
+        return runFields ? runFields[field.name] : null;
       },
       valueFormatter: (value) => formatFieldValue(value, String(field.name)),
     });
