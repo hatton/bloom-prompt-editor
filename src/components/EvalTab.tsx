@@ -12,8 +12,11 @@ import { FieldView } from "@/components/FieldView";
 import { ModelChooser } from "@/components/ModelChooser";
 import { PromptChooser } from "@/components/PromptChooser";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useSettings } from "@/hooks/useSettings";
 import { getMostRecentRunFieldSetId } from "@/lib/runUtils";
+import { runPrompt } from "@/lib/runPrompt";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 export const EvalTab: React.FC = () => {
   const [splitPosition, setSplitPosition] = useLocalStorage<number[]>(
@@ -38,6 +41,19 @@ export const EvalTab: React.FC = () => {
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [runLog, setRunLog] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+
+  // Get OpenRouter API key from settings
+  const { openRouterApiKey } = useSettings();
+
+  // Get selected prompt and model from their respective localStorage keys
+  const [selectedPromptId] = useLocalStorage<number | null>(
+    "currentPromptId",
+    null
+  );
+  const [selectedModel] = useLocalStorage<string>(
+    "selectedModel",
+    "google/gemini-flash-1.5"
+  );
 
   // Handle row selection from the grid
   const handleRowSelectionChange = useCallback(
@@ -111,6 +127,30 @@ export const EvalTab: React.FC = () => {
   const handleRunTests = useCallback(async () => {
     if (selectedForRun.length === 0) return;
 
+    // Validate required settings
+    if (!openRouterApiKey) {
+      console.error("OpenRouter API key is required");
+      setRunLog([
+        "❌ Error: OpenRouter API key is required. Please set it in Settings.",
+      ]);
+      setRunDialogOpen(true);
+      return;
+    }
+
+    if (!selectedPromptId) {
+      console.error("Prompt selection is required");
+      setRunLog(["❌ Error: Please select a prompt to run."]);
+      setRunDialogOpen(true);
+      return;
+    }
+
+    if (!selectedModel) {
+      console.error("Model selection is required");
+      setRunLog(["❌ Error: Please select a model to run."]);
+      setRunDialogOpen(true);
+      return;
+    }
+
     setRunDialogOpen(true);
     setIsRunning(true);
     setRunLog([]);
@@ -118,27 +158,95 @@ export const EvalTab: React.FC = () => {
     try {
       const log: string[] = [];
       log.push(`Starting test run for ${selectedForRun.length} test books...`);
+      log.push(`Using model: ${selectedModel}`);
       log.push(""); // Empty line for spacing
       setRunLog([...log]);
 
-      // Simulate running tests for each selected book
+      // First, get the prompt details
+      const { data: promptData, error: promptError } = await supabase
+        .from("prompt")
+        .select("*")
+        .eq("id", selectedPromptId)
+        .single();
+
+      if (promptError || !promptData) {
+        throw new Error(`Failed to fetch prompt: ${promptError?.message}`);
+      }
+
+      if (!promptData.user_prompt) {
+        throw new Error("Selected prompt has no content");
+      }
+
+      log.push(`Using prompt: ${promptData.label || "Untitled"}`);
+      log.push(""); // Empty line for spacing
+      setRunLog([...log]);
+
+      const promptSettings = {
+        promptText: promptData.user_prompt,
+        temperature: promptData.temperature || 0.7,
+      };
+
+      // Run tests for each selected book
       for (const bookData of selectedBooksData) {
         const label = bookData.label || `Book ${bookData.id}`;
         log.push(`Running test for: ${label}`);
         setRunLog([...log]);
 
-        // Simulate some processing time
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        try {
+          // Get the book input data
+          const { data: bookInputData, error: bookInputError } = await supabase
+            .from("book-input")
+            .select("*")
+            .eq("id", bookData.id)
+            .single();
 
-        // For now, just log the book label as requested
-        log.push(`  - Test book label: ${label}`);
-        log.push(`  - Book ID: ${bookData.id}`);
-        log.push(`  - Status: Completed`);
-        log.push(""); // Empty line for spacing
-        setRunLog([...log]);
+          if (bookInputError || !bookInputData) {
+            throw new Error(
+              `Failed to fetch book input: ${bookInputError?.message}`
+            );
+          }
+
+          if (!bookInputData.ocr_markdown) {
+            log.push(`  - ⚠️ Warning: No OCR markdown content for ${label}`);
+            setRunLog([...log]);
+            continue;
+          }
+
+          // Create an AbortController for this run
+          const abortController = new AbortController();
+
+          // Run the prompt without streaming
+          const result = await runPrompt(
+            selectedPromptId,
+            bookData.id,
+            openRouterApiKey,
+            promptSettings,
+            selectedModel,
+            bookInputData.ocr_markdown,
+            abortController.signal
+            // No onStream callback - we're running without streaming
+          );
+
+          log.push(`  - ✅ Completed successfully`);
+          log.push(`  - Run ID: ${result.run.id}`);
+          log.push(`  - Model: ${result.run.model}`);
+          log.push(`  - Temperature: ${result.run.temperature}`);
+          if (result.usage) {
+            log.push(
+              `  - Tokens used: ${result.usage.totalTokens} (${result.usage.promptTokens} prompt + ${result.usage.completionTokens} completion)`
+            );
+          }
+          log.push(""); // Empty line for spacing
+          setRunLog([...log]);
+        } catch (error) {
+          console.error(`Error running test for ${label}:`, error);
+          log.push(`  - ❌ Error: ${error}`);
+          log.push(""); // Empty line for spacing
+          setRunLog([...log]);
+        }
       }
 
-      log.push("✅ Test run completed successfully!");
+      log.push("✅ Test run completed!");
       setRunLog([...log]);
     } catch (error) {
       console.error("Error running tests:", error);
@@ -146,7 +254,13 @@ export const EvalTab: React.FC = () => {
     } finally {
       setIsRunning(false);
     }
-  }, [selectedForRun, selectedBooksData]);
+  }, [
+    selectedForRun,
+    selectedBooksData,
+    openRouterApiKey,
+    selectedPromptId,
+    selectedModel,
+  ]);
 
   // Close run dialog
   const handleCloseRunDialog = useCallback(() => {
