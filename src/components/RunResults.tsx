@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -13,46 +12,51 @@ import type { Tables } from "@/integrations/supabase/types";
 import { fieldDefinitions } from "@/lib/fieldParsing";
 
 type FieldSet = Tables<"field-set">;
+type Run = Tables<"run">;
 
-interface FieldViewProps {
-  correctFieldSetId: number | null;
-  resultFieldSetId: number | null;
+interface RunResultsProps {
+  runId: number | null;
 }
 
-export const FieldView = ({
-  correctFieldSetId,
-  resultFieldSetId,
-}: FieldViewProps) => {
+export const RunResults = ({ runId }: RunResultsProps) => {
   const [correctFields, setCorrectFields] = useState<FieldSet | null>(null);
   const [resultFields, setResultFields] = useState<FieldSet | null>(null);
 
   useEffect(() => {
     const loadFieldSets = async () => {
       try {
-        // Load correct fields if we have an ID
-        if (correctFieldSetId) {
-          const { data: correctFieldSet, error: correctError } = await supabase
-            .from("field-set")
-            .select("*")
-            .eq("id", correctFieldSetId)
-            .single();
-
-          if (correctError) {
-            console.error("Error loading correct field set:", correctError);
-            setCorrectFields(null);
-          } else {
-            setCorrectFields(correctFieldSet);
-          }
-        } else {
+        if (!runId) {
           setCorrectFields(null);
+          setResultFields(null);
+          return;
         }
 
-        // Load result fields if we have an ID
-        if (resultFieldSetId) {
+        // Get the run with its related book input and field sets
+        const { data: run, error: runError } = await supabase
+          .from("run")
+          .select(
+            `
+            *,
+            book_input_id,
+            discovered_fields
+          `
+          )
+          .eq("id", runId)
+          .single();
+
+        if (runError) {
+          console.error("Error loading run:", runError);
+          setCorrectFields(null);
+          setResultFields(null);
+          return;
+        }
+
+        // Load result fields from the run's discovered_fields
+        if (run.discovered_fields) {
           const { data: resultFieldSet, error: resultError } = await supabase
             .from("field-set")
             .select("*")
-            .eq("id", resultFieldSetId)
+            .eq("id", run.discovered_fields)
             .single();
 
           if (resultError) {
@@ -64,6 +68,38 @@ export const FieldView = ({
         } else {
           setResultFields(null);
         }
+
+        // Load correct fields from the book input's correct_fields
+        if (run.book_input_id) {
+          const { data: bookInput, error: bookError } = await supabase
+            .from("book-input")
+            .select("correct_fields")
+            .eq("id", run.book_input_id)
+            .single();
+
+          if (bookError) {
+            console.error("Error loading book input:", bookError);
+            setCorrectFields(null);
+          } else if (bookInput.correct_fields) {
+            const { data: correctFieldSet, error: correctError } =
+              await supabase
+                .from("field-set")
+                .select("*")
+                .eq("id", bookInput.correct_fields)
+                .single();
+
+            if (correctError) {
+              console.error("Error loading correct field set:", correctError);
+              setCorrectFields(null);
+            } else {
+              setCorrectFields(correctFieldSet);
+            }
+          } else {
+            setCorrectFields(null);
+          }
+        } else {
+          setCorrectFields(null);
+        }
       } catch (error) {
         console.error("Error loading field sets:", error);
         setCorrectFields(null);
@@ -72,7 +108,7 @@ export const FieldView = ({
     };
 
     loadFieldSets();
-  }, [correctFieldSetId, resultFieldSetId]);
+  }, [runId]);
 
   return (
     <div className="flex-1 overflow-hidden bg-white flex flex-col">

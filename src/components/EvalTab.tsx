@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
 import { RunLogDialog } from "@/components/RunLogDialog";
 import { EvalGridMui } from "@/components/EvalGridMui";
-import { FieldView } from "@/components/FieldView";
+import { RunResults } from "@/components/RunResults";
 import { ModelChooser } from "@/components/ModelChooser";
 import { PromptChooser } from "@/components/PromptChooser";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSettings } from "@/hooks/useSettings";
 import {
   getMostRecentRunFieldSetId,
-  getMostRecentRunFieldSetIdWithPromptAndModel,
+  getMostRecentRunWithPromptAndModel,
 } from "@/lib/runUtils";
 import { runPrompt } from "@/lib/runPrompt";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,8 +32,7 @@ export const EvalTab: React.FC = () => {
     null
   );
   const [selectedBookData, setSelectedBookData] = useState<{
-    correctFieldSetId: number | null;
-    recentRunFieldSetId: number | null;
+    runId: number | null;
   } | null>(null);
 
   // State for tracking selected books for running tests
@@ -83,17 +82,15 @@ export const EvalTab: React.FC = () => {
           return;
         }
 
-        // Get the most recent run's field-set ID that matches the selected prompt and model
-        const recentRunFieldSetId =
-          await getMostRecentRunFieldSetIdWithPromptAndModel(
-            bookId,
-            selectedPromptId,
-            selectedModel
-          );
+        // Get the most recent run that matches the selected prompt and model
+        const recentRun = await getMostRecentRunWithPromptAndModel(
+          bookId,
+          selectedPromptId,
+          selectedModel
+        );
 
         setSelectedBookData({
-          correctFieldSetId: bookInput.correct_fields,
-          recentRunFieldSetId,
+          runId: recentRun?.id || null,
         });
       } catch (error) {
         console.error("Error loading book data:", error);
@@ -337,10 +334,7 @@ export const EvalTab: React.FC = () => {
             </div>
 
             {selectedBookData ? (
-              <FieldView
-                correctFieldSetId={selectedBookData.correctFieldSetId}
-                resultFieldSetId={selectedBookData.recentRunFieldSetId}
-              />
+              <RunResults runId={selectedBookData.runId} />
             ) : (
               <div className="flex-1 p-4 overflow-auto">
                 <div className="text-center text-gray-500 mt-8">

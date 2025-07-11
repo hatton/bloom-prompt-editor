@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ModelChooser } from "@/components/ModelChooser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Square, Info, AlertTriangle } from "lucide-react";
 import { DiffView } from "@/components/DiffView";
-import { FieldView } from "@/components/FieldView";
+import { RunResults } from "@/components/RunResults";
 import {
   Tooltip,
   TooltipContent,
@@ -13,7 +13,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { LanguageModelUsage } from "ai";
-import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Run = Tables<"run">;
@@ -63,48 +62,6 @@ export const OutputSection = ({
   onCopyOutput,
 }: OutputSectionProps) => {
   const [activeTab, setActiveTab] = useState("diff");
-  const [correctFieldSetId, setCorrectFieldSetId] = useState<number | null>(
-    null
-  );
-
-  // Load the correct field set ID from the selected book input
-  useEffect(() => {
-    const loadCorrectFieldSetId = async () => {
-      if (!selectedBookId) {
-        setCorrectFieldSetId(null);
-        return;
-      }
-
-      try {
-        const bookInputId = selectedBookId
-          ? parseInt(selectedBookId, 10)
-          : null;
-
-        if (!bookInputId) {
-          setCorrectFieldSetId(null);
-          return;
-        }
-
-        const { data: bookInput, error } = await supabase
-          .from("book-input")
-          .select("correct_fields")
-          .eq("id", bookInputId)
-          .single();
-
-        if (error) {
-          console.error("Error loading book input:", error);
-          setCorrectFieldSetId(null);
-        } else {
-          setCorrectFieldSetId(bookInput?.correct_fields || null);
-        }
-      } catch (error) {
-        console.error("Error loading correct field set ID:", error);
-        setCorrectFieldSetId(null);
-      }
-    };
-
-    loadCorrectFieldSetId();
-  }, [selectedBookId]);
 
   const formatRunDate = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -219,10 +176,7 @@ export const OutputSection = ({
               value="fields"
               className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
             >
-              <FieldView
-                correctFieldSetId={correctFieldSetId}
-                resultFieldSetId={currentRun?.discovered_fields || null}
-              />
+              <RunResults runId={currentRun?.id || null} />
             </TabsContent>
             <TabsContent
               value="diff"
