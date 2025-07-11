@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -10,6 +10,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { fieldDefinitions } from "@/lib/fieldParsing";
+import { CorrectnessButton, type CorrectnessState } from "./CorrectnessButton";
 
 type FieldSet = Tables<"field-set">;
 
@@ -20,6 +21,7 @@ interface FieldsComparisonViewProps {
 export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
   const [correctFields, setCorrectFields] = useState<FieldSet | null>(null);
   const [resultFields, setResultFields] = useState<FieldSet | null>(null);
+  const rowRefs = useRef<{ [key: string]: HTMLTableRowElement | null }>({});
 
   useEffect(() => {
     const loadFieldSets = async () => {
@@ -109,18 +111,101 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
     loadFieldSets();
   }, [runId]);
 
+  const getCorrectnessState = (
+    correctValue: string,
+    resultValue: string
+  ): CorrectnessState => {
+    if (!correctValue) return "unknown";
+    if (correctValue === resultValue) return "correct";
+    return "wrong";
+  };
+
+  const handleCorrectnessClick = async (
+    fieldName: string,
+    resultValue: string
+  ) => {
+    if (!runId || !correctFields) return;
+
+    try {
+      // Get the book input ID from the run
+      const { data: run, error: runError } = await supabase
+        .from("run")
+        .select("book_input_id")
+        .eq("id", runId)
+        .single();
+
+      if (runError || !run.book_input_id) {
+        console.error("Error getting run or book input ID:", runError);
+        return;
+      }
+
+      // Get the book input's correct_fields ID
+      const { data: bookInput, error: bookError } = await supabase
+        .from("book-input")
+        .select("correct_fields")
+        .eq("id", run.book_input_id)
+        .single();
+
+      if (bookError || !bookInput.correct_fields) {
+        console.error(
+          "Error getting book input or correct fields ID:",
+          bookError
+        );
+        return;
+      }
+
+      // Update the field-set with the trimmed result value
+      const trimmedValue = resultValue.trim();
+      const { error: updateError } = await supabase
+        .from("field-set")
+        .update({ [fieldName]: trimmedValue })
+        .eq("id", bookInput.correct_fields);
+
+      if (updateError) {
+        console.error("Error updating field-set:", updateError);
+        return;
+      }
+
+      // Update the local state to reflect the change
+      setCorrectFields((prev) =>
+        prev
+          ? {
+              ...prev,
+              [fieldName]: trimmedValue,
+            }
+          : null
+      );
+
+      // Scroll the updated row into view
+      setTimeout(() => {
+        const rowElement = rowRefs.current[fieldName];
+        if (rowElement) {
+          rowElement.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }, 100); // Small delay to ensure state update is reflected in DOM
+    } catch (error) {
+      console.error("Error handling correctness click:", error);
+    }
+  };
+
   return (
-    <div className="flex-1 overflow-hidden bg-white flex flex-col">
+    <div className="flex-1 overflow-hidden bg-white flex flex-col border border-red-500">
+      {/* just the headers table */}
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[200px]">Field</TableHead>
             <TableHead>Correct</TableHead>
             <TableHead>This Run</TableHead>
+            <TableHead className="w-[80px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
       </Table>
-      <div className="flex-1 overflow-auto">
+      {/* actual fields table */}
+      <div className="flex-1 overflow-scroll">
         <Table>
           <TableBody>
             {(() => {
@@ -203,7 +288,13 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
                 }
 
                 return (
-                  <TableRow key={field.dbFieldName} className={rowClassName}>
+                  <TableRow
+                    key={field.dbFieldName}
+                    className={rowClassName}
+                    ref={(el) => {
+                      rowRefs.current[field.dbFieldName] = el;
+                    }}
+                  >
                     <TableCell className="font-medium w-[200px]">
                       {field.label}
                     </TableCell>
@@ -215,6 +306,19 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
                     <TableCell className="max-w-[300px] break-words">
                       {resultValue || (
                         <span className="text-muted-foreground italic"></span>
+                      )}
+                    </TableCell>
+                    <TableCell className="w-[80px]">
+                      {resultValue && (
+                        <CorrectnessButton
+                          state={getCorrectnessState(correctValue, resultValue)}
+                          onClick={() =>
+                            handleCorrectnessClick(
+                              field.dbFieldName,
+                              resultValue
+                            )
+                          }
+                        />
                       )}
                     </TableCell>
                   </TableRow>

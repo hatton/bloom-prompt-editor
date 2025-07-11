@@ -108,13 +108,13 @@ export const RunResultsView = ({
   }
 
   return (
-    <div className="bg-blue-50">
+    <div className="h-full flex flex-col overflow-hidden bg-blue-50 border border-green-500">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
-        className="flex-1 flex flex-col min-h-0 grow mt-[15px]"
+        className="flex-1 flex flex-col min-h-0 h-full"
       >
-        <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
+        <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start mt-[15px]">
           <TabsTrigger
             value="fields"
             className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none"
@@ -130,13 +130,13 @@ export const RunResultsView = ({
         </TabsList>
         <TabsContent
           value="fields"
-          className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
+          className="flex-1 min-h-0 !mt-0 h-full flex flex-col data-[state=inactive]:hidden"
         >
           <FieldsComparisonView runId={runId} />
         </TabsContent>
         <TabsContent
           value="markdown"
-          className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
+          className="flex-1 min-h-0 !mt-0 h-full flex flex-col data-[state=inactive]:hidden"
         >
           {runData?.output ? (
             <DiffView
