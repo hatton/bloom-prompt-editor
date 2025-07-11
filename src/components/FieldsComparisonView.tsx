@@ -96,7 +96,32 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
               setCorrectFields(correctFieldSet);
             }
           } else {
-            setCorrectFields(null);
+            // Create a new field-set if correct_fields is null or empty
+            const { data: newFieldSet, error: createError } = await supabase
+              .from("field-set")
+              .insert({})
+              .select("*")
+              .single();
+
+            if (createError) {
+              console.error("Error creating new field set:", createError);
+              setCorrectFields(null);
+            } else {
+              // Update the book-input to reference the new field-set
+              const { error: updateError } = await supabase
+                .from("book-input")
+                .update({ correct_fields: newFieldSet.id })
+                .eq("id", run.book_input_id);
+
+              if (updateError) {
+                console.error(
+                  "Error updating book input with new field set:",
+                  updateError
+                );
+              }
+
+              setCorrectFields(newFieldSet);
+            }
           }
         } else {
           setCorrectFields(null);
@@ -127,39 +152,12 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
     if (!runId || !correctFields) return;
 
     try {
-      // Get the book input ID from the run
-      const { data: run, error: runError } = await supabase
-        .from("run")
-        .select("book_input_id")
-        .eq("id", runId)
-        .single();
-
-      if (runError || !run.book_input_id) {
-        console.error("Error getting run or book input ID:", runError);
-        return;
-      }
-
-      // Get the book input's correct_fields ID
-      const { data: bookInput, error: bookError } = await supabase
-        .from("book-input")
-        .select("correct_fields")
-        .eq("id", run.book_input_id)
-        .single();
-
-      if (bookError || !bookInput.correct_fields) {
-        console.error(
-          "Error getting book input or correct fields ID:",
-          bookError
-        );
-        return;
-      }
-
       // Update the field-set with the trimmed result value
       const trimmedValue = resultValue.trim();
       const { error: updateError } = await supabase
         .from("field-set")
         .update({ [fieldName]: trimmedValue })
-        .eq("id", bookInput.correct_fields);
+        .eq("id", correctFields.id);
 
       if (updateError) {
         console.error("Error updating field-set:", updateError);
@@ -197,10 +195,10 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px]">Field</TableHead>
-            <TableHead>Correct</TableHead>
-            <TableHead>This Run</TableHead>
-            <TableHead className="w-[80px]">Actions</TableHead>
+            <TableHead className="w-[200px] text-left">Field</TableHead>
+            <TableHead className="w-[200px] text-left">Correct</TableHead>
+            <TableHead className="w-[200px] text-left">This Run</TableHead>
+            <TableHead className="w-[80px] text-left">Actions</TableHead>
           </TableRow>
         </TableHeader>
       </Table>
@@ -295,30 +293,43 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
                       rowRefs.current[field.dbFieldName] = el;
                     }}
                   >
-                    <TableCell className="font-medium w-[200px]">
+                    <TableCell className="font-medium w-[200px] text-left">
                       {field.label}
                     </TableCell>
-                    <TableCell className="max-w-[300px] break-words">
+                    <TableCell className="w-[200px] break-words text-left">
                       {correctValue || (
                         <span className="text-muted-foreground italic"></span>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-[300px] break-words">
+                    <TableCell className="w-[200px] break-words text-left">
                       {resultValue || (
                         <span className="text-muted-foreground italic"></span>
                       )}
                     </TableCell>
-                    <TableCell className="w-[80px]">
+                    <TableCell className="w-[80px] text-left">
                       {resultValue && (
-                        <CorrectnessButton
-                          state={getCorrectnessState(correctValue, resultValue)}
-                          onClick={() =>
-                            handleCorrectnessClick(
-                              field.dbFieldName,
-                              resultValue
-                            )
+                        <div
+                          title={
+                            !correctValue
+                              ? "Copy this result to the correct value for this field"
+                              : correctValue === resultValue
+                              ? "Values match - no action needed"
+                              : "Copy this result to replace the current correct value"
                           }
-                        />
+                        >
+                          <CorrectnessButton
+                            state={getCorrectnessState(
+                              correctValue,
+                              resultValue
+                            )}
+                            onClick={() =>
+                              handleCorrectnessClick(
+                                field.dbFieldName,
+                                resultValue
+                              )
+                            }
+                          />
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
