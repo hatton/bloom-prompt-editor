@@ -94,9 +94,20 @@ export async function runPromptStream(
   temperature: number = 0.0,
   abortSignal?: AbortSignal
 ) {
+  console.log("🌐 OpenRouter: Starting stream request", {
+    modelId,
+    temperature,
+    promptLength: llmPrompt.length,
+    markdownLength: markdown.length,
+    hasAbortSignal: !!abortSignal,
+    maxTokens: getMaxTokens(markdown),
+  });
+
   const openrouterProvider = createOpenRouter({
     apiKey: apiKey,
   });
+
+  console.log("🔧 OpenRouter: Created provider, calling streamText...");
 
   // Call the AI model to stream the response
   const result = await streamText({
@@ -107,12 +118,17 @@ export async function runPromptStream(
     abortSignal,
   });
 
+  console.log("✅ OpenRouter: streamText call completed, returning streams", {
+    hasTextStream: !!result.textStream,
+    hasFinishReasonPromise: !!result.finishReason,
+    hasUsagePromise: !!result.usage,
+  });
+
   return {
     textStream: result.textStream,
     promptParams: {
       promptLength: llmPrompt.length,
       inputLength: markdown.length,
-
       maxTokens: getMaxTokens(markdown),
     },
     finishReasonPromise: result.finishReason,

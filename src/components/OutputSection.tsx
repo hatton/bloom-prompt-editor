@@ -45,6 +45,30 @@ export const OutputSection = () => {
 
   const { toast } = useToast();
 
+  // Debug effect to track currentRun changes
+  useEffect(() => {
+    console.log("🔄 OutputSection: currentRun state changed", {
+      runId: currentRun?.id,
+      finishReason: currentRun?.finish_reason,
+      output: currentRun?.output?.substring(0, 100) + (currentRun?.output && currentRun.output.length > 100 ? '...' : ''),
+      hasCurrentRun: !!currentRun
+    });
+  }, [currentRun]);
+
+  // Create a wrapper for setOutput with logging
+  const setOutputWithLogging = useCallback(
+    (newOutput: string) => {
+      console.log("📝 OutputSection: setOutput called", {
+        newLength: newOutput.length,
+        previousLength: output.length,
+        preview:
+          newOutput.substring(0, 100) + (newOutput.length > 100 ? "..." : ""),
+      });
+      setOutput(newOutput);
+    },
+    [output.length]
+  );
+
   // Load book inputs and current prompt settings
   useEffect(() => {
     const loadData = async () => {
@@ -96,6 +120,15 @@ export const OutputSection = () => {
   }, [selectedBookId, currentPromptId, selectedModel]);
 
   const handleRun = async () => {
+    console.log("🎯 OutputSection: handleRun triggered", {
+      selectedBookId,
+      currentPromptId,
+      selectedModel,
+      hasApiKey: !!openRouterApiKey,
+      isRunning,
+      promptSettings,
+    });
+
     setWaitingForRun(false);
     if (!selectedBookId) {
       toast({
@@ -138,8 +171,19 @@ export const OutputSection = () => {
     setAbortController(controller);
     setIsRunning(true);
     setOutput("");
+
+    console.log("🎬 OutputSection: Starting prompt run", {
+      currentPromptId,
+      selectedBookId,
+      selectedModel,
+      promptSettings,
+      inputMarkdownLength: selectedInput.ocr_markdown?.length || 0,
+      hasApiKey: !!openRouterApiKey,
+    });
+
     let runResult: RunResult | null = null;
     try {
+      console.log("📞 OutputSection: Calling runPrompt...");
       runResult = await runPrompt(
         currentPromptId,
         selectedBookId,
@@ -148,13 +192,25 @@ export const OutputSection = () => {
         selectedModel,
         selectedInput.ocr_markdown || "",
         controller.signal,
-        setOutput
+        setOutputWithLogging
       );
-
+      console.log("✅ OutputSection: Run prompt finished successfully", {
+        runId: runResult?.run?.id,
+        outputLength: runResult?.run?.output?.length || 0,
+      });
       toast({
         title: "Run completed successfully",
       });
     } catch (error) {
+      console.error("❌ OutputSection: Run prompt error:", error);
+      
+      // Check if the error contains a run result (for payment errors)
+      const errorWithRunResult = error as Error & { runResult?: RunResult };
+      if (errorWithRunResult.runResult) {
+        console.log("📋 OutputSection: Error contains run result, using it");
+        runResult = errorWithRunResult.runResult;
+      }
+      
       if (error.name !== "AbortError" && error.message !== "Stream aborted") {
         console.error("Error running prompt:", error);
         toast({
@@ -162,13 +218,30 @@ export const OutputSection = () => {
           variant: "destructive",
         });
       } else {
+        console.log("⏹️ OutputSection: Run was aborted");
         toast({
           title: "Run stopped",
           duration: 1000,
         });
       }
     } finally {
-      setCurrentRun(runResult.run); // even if there was an error (usually ran out of tokens), the run will have been created and have diagnostic information
+      console.log("🔚 OutputSection: Cleaning up run state", {
+        hasRunResult: !!runResult,
+        runId: runResult?.run?.id,
+        runResultType: typeof runResult,
+        runObject: runResult?.run
+      });
+      
+      if (runResult?.run) {
+        console.log("✅ OutputSection: Setting currentRun with run data", {
+          runId: runResult.run.id,
+          finishReason: runResult.run.finish_reason
+        });
+        setCurrentRun(runResult.run);
+      } else {
+        console.log("⚠️ OutputSection: No run result to set");
+      }
+      
       setIsRunning(false);
       setAbortController(null);
     }
