@@ -433,8 +433,8 @@ export const PromptsTab = () => {
         promptSettings,
         selectedModel,
         selectedInput.ocr_markdown || "",
-        setOutput,
-        controller.signal
+        controller.signal,
+        setOutput
       );
 
       // Store the complete run result for use in promptResult prop
