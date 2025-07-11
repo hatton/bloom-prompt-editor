@@ -41,6 +41,7 @@ export const EvalTab: React.FC = () => {
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [runLog, setRunLog] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add refresh trigger
 
   // Get OpenRouter API key from settings
   const { openRouterApiKey } = useSettings();
@@ -248,9 +249,15 @@ export const EvalTab: React.FC = () => {
 
       log.push("✅ Test run completed!");
       setRunLog([...log]);
+
+      // Trigger a refresh of the grid data to update "Last Test" column
+      setRefreshTrigger((prev) => prev + 1);
     } catch (error) {
       console.error("Error running tests:", error);
       setRunLog((prev) => [...prev, `❌ Error: ${error}`]);
+
+      // Still trigger a refresh in case some tests completed successfully
+      setRefreshTrigger((prev) => prev + 1);
     } finally {
       setIsRunning(false);
     }
@@ -300,6 +307,7 @@ export const EvalTab: React.FC = () => {
               <EvalGridMui
                 onRowSelectionChange={handleRowSelectionChange}
                 onCheckboxSelectionChange={handleCheckboxSelectionChange}
+                refreshTrigger={refreshTrigger}
               />
             </div>
           </div>

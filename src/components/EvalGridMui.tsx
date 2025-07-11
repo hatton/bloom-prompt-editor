@@ -102,11 +102,13 @@ interface EvalGridState {
 interface EvalGridMuiProps {
   onRowSelectionChange?: (selectedBookId: number | null) => void;
   onCheckboxSelectionChange?: (selectedBookIds: number[]) => void;
+  refreshTrigger?: number; // Add a trigger to force refresh
 }
 
 export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
   onRowSelectionChange,
   onCheckboxSelectionChange,
+  refreshTrigger,
 }) => {
   const [data, setData] = useState<InputBookWithComputedFields[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,7 +228,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
 
   useEffect(() => {
     loadBookInputs();
-  }, [loadBookInputs]);
+  }, [loadBookInputs, refreshTrigger]); // Add refreshTrigger to dependency array
 
   // Sync grid selection with the selectedBookId from localStorage
   useEffect(() => {
