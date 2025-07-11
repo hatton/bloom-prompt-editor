@@ -12,6 +12,7 @@ import {
   GridRowId,
 } from "@mui/x-data-grid-pro";
 import { Box, Typography, CircularProgress } from "@mui/material";
+import { formatDistanceToNow, isAfter, subDays } from "date-fns";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -398,6 +399,17 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
           return <Typography color="text.disabled">Never</Typography>;
         }
 
+        // Use friendly format for dates within the last 7 days, otherwise use normal date/time
+        const isRecent = isAfter(date, subDays(new Date(), 7));
+        const displayText = isRecent
+          ? formatDistanceToNow(date, { addSuffix: true })
+          : date.toLocaleDateString() +
+            " " +
+            date.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+
         return (
           <Typography
             sx={{
@@ -406,13 +418,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             }}
             title={date.toLocaleString()}
           >
-            {date.toLocaleDateString()}{" "}
-            <span style={{ color: "rgba(0, 0, 0, 0.6)" }}>
-              {date.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
+            {displayText}
           </Typography>
         );
       },
