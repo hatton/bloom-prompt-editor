@@ -82,27 +82,27 @@ export const EvalTab: React.FC = () => {
   const handleCheckboxSelectionChange = useCallback(
     async (selectedIds: number[]) => {
       console.log("Selected IDs:", selectedIds);
-      //     setSelectedForRun(selectedIds);
-      //     // Fetch book data for selected books
-      //     if (selectedIds.length > 0) {
-      //       try {
-      //         const { data: booksData, error } = await supabase
-      //           .from("book-input")
-      //           .select("id, label")
-      //           .in("id", selectedIds);
-      //         if (error) {
-      //           console.error("Error fetching selected books data:", error);
-      //           setSelectedBooksData([]);
-      //         } else {
-      //           setSelectedBooksData(booksData || []);
-      //         }
-      //       } catch (error) {
-      //         console.error("Error fetching selected books data:", error);
-      //         setSelectedBooksData([]);
-      //       }
-      //     } else {
-      //       setSelectedBooksData([]);
-      //     }
+      setSelectedForRun(selectedIds);
+      // Fetch book data for selected books
+      if (selectedIds.length > 0) {
+        try {
+          const { data: booksData, error } = await supabase
+            .from("book-input")
+            .select("id, label")
+            .in("id", selectedIds);
+          if (error) {
+            console.error("Error fetching selected books data:", error);
+            setSelectedBooksData([]);
+          } else {
+            setSelectedBooksData(booksData || []);
+          }
+        } catch (error) {
+          console.error("Error fetching selected books data:", error);
+          setSelectedBooksData([]);
+        }
+      } else {
+        setSelectedBooksData([]);
+      }
     },
     []
   );
