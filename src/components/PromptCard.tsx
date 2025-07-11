@@ -155,10 +155,10 @@ export const PromptCard = ({
     onLabelChange?.(savedPrompt.label || "");
     setInputValue(savedPrompt.label || "");
     setIsOpen(false);
-    
+
     // Notify parent component that a prompt was loaded
     onPromptLoad?.(savedPrompt.id);
-    
+
     toast({
       title: `Loaded prompt: ${savedPrompt.label}`,
       duration: 1500,

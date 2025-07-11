@@ -86,17 +86,8 @@ export async function runPrompt(
   const finishReason = await finishReasonPromise;
   const usage = await usagePromise;
 
-  if (finishReason && finishReason !== "stop") {
-    if (finishReason === "length") {
-      throw new Error(
-        "Ran out of tokens before finishing (max tokens reached)"
-      );
-    }
-    throw new Error(`Streaming finished with reason: ${finishReason}`);
-  }
-
-  // If the process was aborted, we'll have thrown an error already.
-  // Now, parse fields and save the final run to the database.
+  // Parse fields and save the run to the database regardless of finish reason
+  // This ensures we have diagnostic information even when runs fail
   let discoveredFieldsId = null;
   try {
     discoveredFieldsId = await parseAndStoreFieldSet(fullResult);
@@ -105,7 +96,7 @@ export async function runPrompt(
     // Continue with run creation even if field parsing fails
   }
 
-  // Create new run with the complete result
+  // Create new run with the complete result (including failed runs)
   const { data: newRun, error: runError } = await supabase
     .from("run")
     .insert({
@@ -123,6 +114,17 @@ export async function runPrompt(
     .single();
 
   if (runError) throw runError;
+
+  // After saving the run, check the finish reason and throw errors if needed
+  // This way we have the diagnostic data saved even for failed runs
+  if (finishReason && finishReason !== "stop") {
+    if (finishReason === "length") {
+      throw new Error(
+        "Ran out of tokens before finishing (max tokens reached)"
+      );
+    }
+    throw new Error(`Streaming finished with reason: ${finishReason}`);
+  }
 
   return {
     run: newRun,

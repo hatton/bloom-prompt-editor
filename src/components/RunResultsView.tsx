@@ -24,11 +24,7 @@ export const RunResultsView = ({
   };
 
   if (!runId) {
-    return (
-      <div className="flex-1 p-4 flex items-center justify-center">
-        <p className="text-gray-500">No run selected</p>
-      </div>
-    );
+    return null;
   }
 
   return (

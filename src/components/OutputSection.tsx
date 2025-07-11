@@ -138,9 +138,9 @@ export const OutputSection = () => {
     setAbortController(controller);
     setIsRunning(true);
     setOutput("");
-
+    let runResult: RunResult | null = null;
     try {
-      const runResult = await runPrompt(
+      runResult = await runPrompt(
         currentPromptId,
         selectedBookId,
         openRouterApiKey,
@@ -150,9 +150,6 @@ export const OutputSection = () => {
         controller.signal,
         setOutput
       );
-
-      // Store the complete run result
-      setCurrentRun(runResult.run);
 
       toast({
         title: "Run completed successfully",
@@ -171,6 +168,7 @@ export const OutputSection = () => {
         });
       }
     } finally {
+      setCurrentRun(runResult.run); // even if there was an error (usually ran out of tokens), the run will have been created and have diagnostic information
       setIsRunning(false);
       setAbortController(null);
     }
