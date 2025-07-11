@@ -28,6 +28,7 @@ interface InputBookWithComputedFields extends BookInput {
   wordCount: number;
   score: number | undefined;
   correctFields: FieldSet | null;
+  lastTestDate: Date | null;
 }
 
 // Helper function to count words in markdown
@@ -118,6 +119,16 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
     null
   );
 
+  // Read the selected prompt and model to determine "last test" criteria
+  const [selectedPromptId] = useLocalStorage<number | null>(
+    "currentPromptId",
+    null
+  );
+  const [selectedModel] = useLocalStorage<string>(
+    "selectedModel",
+    "google/gemini-flash-1.5"
+  );
+
   // Store grid state in localStorage
   const [gridState, setGridState] = useLocalStorage<EvalGridState>(
     "evalGridMuiState",
@@ -173,11 +184,30 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
           // Calculate score
           const score = book.id === 10 ? await getScore(book.id) : undefined;
 
+          // Get last test date for this book with selected prompt and model
+          let lastTestDate: Date | null = null;
+          if (selectedPromptId && selectedModel) {
+            const { data: lastRun } = await supabase
+              .from("run")
+              .select("created_at")
+              .eq("book_input_id", book.id)
+              .eq("prompt_id", selectedPromptId)
+              .eq("model", selectedModel)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (lastRun) {
+              lastTestDate = new Date(lastRun.created_at);
+            }
+          }
+
           return {
             ...book,
             wordCount: countWords(book.ocr_markdown),
             score,
             correctFields,
+            lastTestDate,
           };
         })
       );
@@ -192,7 +222,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, selectedPromptId, selectedModel]);
 
   useEffect(() => {
     loadBookInputs();
@@ -351,6 +381,36 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             }}
           >
             {score}
+          </Typography>
+        );
+      },
+    },
+    {
+      field: "lastTestDate",
+      headerName: "Last Test",
+      width: 160,
+      type: "dateTime",
+      renderCell: (params) => {
+        const date = params.value as Date | null;
+        if (!date) {
+          return <Typography color="text.disabled">Never</Typography>;
+        }
+
+        return (
+          <Typography
+            sx={{
+              fontSize: "0.875rem",
+              color: "text.primary",
+            }}
+            title={date.toLocaleString()}
+          >
+            {date.toLocaleDateString()}{" "}
+            <span style={{ color: "rgba(0, 0, 0, 0.6)" }}>
+              {date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
           </Typography>
         );
       },
