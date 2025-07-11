@@ -85,10 +85,8 @@ export const PromptsTab = () => {
         // Clear the current prompt result since we're loading a different run
         setCurrentPromptResult(null);
 
-        // Load run-specific settings
-        if (run.model) {
-          setSelectedModel(run.model);
-        }
+        // Note: We don't set the selectedModel here to avoid circular dependencies
+        // The selectedModel should drive the run selection, not the other way around
 
         // TODO: Handle discovered_fields when field discovery is implemented
         // if (run.discovered_fields) {
@@ -120,7 +118,7 @@ export const PromptsTab = () => {
         console.error("Error loading run:", error);
       }
     },
-    [setSelectedBookId, setCurrentPromptId, setSelectedModel]
+    [setSelectedBookId, setCurrentPromptId]
   );
 
   useEffect(() => {
@@ -153,6 +151,7 @@ export const PromptsTab = () => {
           .eq("prompt_id", currentPromptId)
           .eq("book_input_id", bookInputId)
           .eq("temperature", promptSettings.temperature)
+          .eq("model", selectedModel)
           .order("created_at", { ascending: false })
           .limit(1)
           .single();
@@ -191,6 +190,7 @@ export const PromptsTab = () => {
     selectedBookId,
     currentPromptId,
     promptSettings.temperature,
+    selectedModel,
     runs,
     loadRun,
     toast,
