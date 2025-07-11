@@ -12,13 +12,12 @@ import type { Tables } from "@/integrations/supabase/types";
 import { fieldDefinitions } from "@/lib/fieldParsing";
 
 type FieldSet = Tables<"field-set">;
-type Run = Tables<"run">;
 
-interface RunResultsProps {
+interface FieldsComparisonViewProps {
   runId: number | null;
 }
 
-export const RunResults = ({ runId }: RunResultsProps) => {
+export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
   const [correctFields, setCorrectFields] = useState<FieldSet | null>(null);
   const [resultFields, setResultFields] = useState<FieldSet | null>(null);
 

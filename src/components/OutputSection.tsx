@@ -5,7 +5,7 @@ import { ModelChooser } from "@/components/ModelChooser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Square, Info, AlertTriangle } from "lucide-react";
 import { DiffView } from "@/components/DiffView";
-import { RunResults } from "@/components/RunResults";
+import { FieldsComparisonView } from "@/components/FieldsComparisonView";
 import {
   Tooltip,
   TooltipContent,
@@ -176,7 +176,7 @@ export const OutputSection = ({
               value="fields"
               className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
             >
-              <RunResults runId={currentRun?.id || null} />
+              <FieldsComparisonView runId={currentRun?.id || null} />
             </TabsContent>
             <TabsContent
               value="diff"
