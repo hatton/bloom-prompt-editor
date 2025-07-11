@@ -421,7 +421,17 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
         columnVisibilityModel={columnVisibilityModel}
         onColumnVisibilityModelChange={setColumnVisibilityModel}
         disableColumnSelector={false}
-        onCellClick={(params, event) => {
+        disableRowSelectionOnClick={true}
+        onRowClick={(params, event) => {
+          // Check if the click target is within the checkbox cell
+          const target = event.target as HTMLElement;
+          const checkboxCell = target.closest('[data-field="__check__"]');
+
+          if (checkboxCell) {
+            // Click is on checkbox column, don't handle row selection
+            return;
+          }
+
           // Handle single row selection for details view
           const bookId = Number(params.id);
           setSelectedRowId([bookId]);
@@ -465,6 +475,29 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             borderBottom: "1px solid",
             borderBottomColor: "divider",
           },
+          "& .MuiDataGrid-row": {
+            "&:hover": {
+              backgroundColor: "action.hover",
+            },
+            "&.selected-row": {
+              backgroundColor: "#dbeafe", // Tailwind's blue-100
+              "&:hover": {
+                backgroundColor: "#bfdbfe", // Tailwind's blue-200
+              },
+            },
+            // Hide default row selection styling
+            "&.Mui-selected": {
+              backgroundColor: "transparent !important",
+              "&:hover": {
+                backgroundColor: "action.hover !important",
+              },
+            },
+          },
+        }}
+        getRowClassName={(params) => {
+          return selectedRowId.includes(Number(params.id))
+            ? "selected-row"
+            : "";
         }}
       />
     </Box>
