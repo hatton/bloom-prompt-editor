@@ -24,6 +24,7 @@ export const InputBookEditor = ({
   const [currentLabel, setCurrentLabel] = useState("");
   const [currentMarkdown, setCurrentMarkdown] = useState("");
   const [currentReferenceMarkdown, setCurrentReferenceMarkdown] = useState("");
+  const [currentNotes, setCurrentNotes] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -34,7 +35,7 @@ export const InputBookEditor = ({
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [errorToastMessage, setErrorToastMessage] = useState("");
   const [toastFieldType, setToastFieldType] = useState<
-    "label" | "ocr_markdown" | "reference_markdown" | null
+    "label" | "ocr_markdown" | "reference_markdown" | "notes" | null
   >(null);
 
   // Track original values to detect changes
@@ -42,6 +43,7 @@ export const InputBookEditor = ({
   const [originalMarkdown, setOriginalMarkdown] = useState("");
   const [originalReferenceMarkdown, setOriginalReferenceMarkdown] =
     useState("");
+  const [originalNotes, setOriginalNotes] = useState("");
 
   // Load input data when inputId changes
   useEffect(() => {
@@ -65,17 +67,20 @@ export const InputBookEditor = ({
           const label = data.label || "";
           const markdown = data.ocr_markdown || "";
           const referenceMarkdown = data.reference_markdown || "";
+          const notes = data.notes || "";
 
           setInput(data);
           setCurrentLabel(label);
           setCurrentMarkdown(markdown);
           setCurrentReferenceMarkdown(referenceMarkdown);
+          setCurrentNotes(notes);
           setHasUnsavedChanges(false);
 
           // Set original values
           setOriginalLabel(label);
           setOriginalMarkdown(markdown);
           setOriginalReferenceMarkdown(referenceMarkdown);
+          setOriginalNotes(notes);
         }
       } catch (error) {
         console.error("Error loading input:", error);
@@ -104,6 +109,7 @@ export const InputBookEditor = ({
                 label: currentLabel,
                 ocr_markdown: currentMarkdown,
                 reference_markdown: currentReferenceMarkdown,
+                notes: currentNotes,
               })
               .eq("id", inputId);
           } catch (error) {
@@ -119,6 +125,7 @@ export const InputBookEditor = ({
     currentLabel,
     currentMarkdown,
     currentReferenceMarkdown,
+    currentNotes,
   ]);
 
   const handleLabelChange = (value: string) => {
@@ -133,6 +140,11 @@ export const InputBookEditor = ({
 
   const handleReferenceMarkdownChange = (value: string) => {
     setCurrentReferenceMarkdown(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleNotesChange = (value: string) => {
+    setCurrentNotes(value);
     setHasUnsavedChanges(true);
   };
 
@@ -164,6 +176,9 @@ export const InputBookEditor = ({
         } else if (fieldName === "reference_markdown") {
           updateData.reference_markdown = currentValue;
           setOriginalReferenceMarkdown(currentValue);
+        } else if (fieldName === "notes") {
+          updateData.notes = currentValue;
+          setOriginalNotes(currentValue);
         }
 
         const { error } = await supabase
@@ -189,11 +204,14 @@ export const InputBookEditor = ({
           fieldName === "reference_markdown"
             ? currentValue
             : originalReferenceMarkdown;
+        const updatedOriginalNotes =
+          fieldName === "notes" ? currentValue : originalNotes;
 
         const allSaved =
           currentLabel === updatedOriginalLabel &&
           currentMarkdown === updatedOriginalMarkdown &&
-          currentReferenceMarkdown === updatedOriginalReferenceMarkdown;
+          currentReferenceMarkdown === updatedOriginalReferenceMarkdown &&
+          currentNotes === updatedOriginalNotes;
 
         if (allSaved) {
           setHasUnsavedChanges(false);
@@ -205,14 +223,14 @@ export const InputBookEditor = ({
             .replace(/\b\w/g, (l) => l.toUpperCase())} saved`
         );
         setToastFieldType(
-          fieldName as "label" | "ocr_markdown" | "reference_markdown"
+          fieldName as "label" | "ocr_markdown" | "reference_markdown" | "notes"
         );
         setShowSavedToast(true);
       } catch (error) {
         console.error(`Error saving ${fieldName}:`, error);
         setErrorToastMessage(`Error saving ${fieldName.replace("_", " ")}`);
         setToastFieldType(
-          fieldName as "label" | "ocr_markdown" | "reference_markdown"
+          fieldName as "label" | "ocr_markdown" | "reference_markdown" | "notes"
         );
         setShowErrorToast(true);
       }
@@ -234,6 +252,10 @@ export const InputBookEditor = ({
       currentReferenceMarkdown,
       originalReferenceMarkdown
     );
+  };
+
+  const handleNotesBlur = () => {
+    saveIfChanged("notes", currentNotes, originalNotes);
   };
 
   const handleToastClose = () => {
@@ -356,7 +378,6 @@ export const InputBookEditor = ({
                   value={currentMarkdown}
                   onChange={(e) => handleMarkdownChange(e.target.value)}
                   onBlur={handleMarkdownBlur}
-                  placeholder="Enter your OCR markdown content here..."
                   className="resize-none font-mono text-sm h-[400px]"
                 />
                 {/* Toast for OCR Markdown field */}
@@ -383,8 +404,44 @@ export const InputBookEditor = ({
               </div>
             </div>
 
-            {/* Reference Markdown Section */}
+            {/* Reference Markdown and Notes Section */}
             <div className="space-y-2">
+              {/* Notes Section */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Notes
+                </label>
+                <div className="relative">
+                  <Textarea
+                    value={currentNotes}
+                    onChange={(e) => handleNotesChange(e.target.value)}
+                    onBlur={handleNotesBlur}
+                    className="resize-none font-mono text-sm h-[190px]"
+                    placeholder="Add notes about this book, the OCR used, etc..."
+                  />
+                  {/* Toast for Notes field */}
+                  {toastFieldType === "notes" && (
+                    <div className="absolute bottom-2 right-2 z-10">
+                      {showSavedToast && (
+                        <InlineToast
+                          title={savedToastMessage}
+                          variant="default"
+                          duration={2000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                      {showErrorToast && (
+                        <InlineToast
+                          title={errorToastMessage}
+                          variant="destructive"
+                          duration={3000}
+                          onClose={handleToastClose}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-medium text-gray-700">
                   Optional Reference Markdown (i.e. the "correct" answer)
@@ -404,8 +461,7 @@ export const InputBookEditor = ({
                     handleReferenceMarkdownChange(e.target.value)
                   }
                   onBlur={handleReferenceMarkdownBlur}
-                  placeholder="Enter your reference markdown content here..."
-                  className="resize-none font-mono text-sm h-[400px]"
+                  className="resize-none font-mono text-sm h-[190px]"
                 />
                 {/* Toast for Reference Markdown field */}
                 {toastFieldType === "reference_markdown" && (

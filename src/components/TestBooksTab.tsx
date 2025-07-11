@@ -64,6 +64,7 @@ export const TestBooksTab = () => {
           ocr_markdown:
             "# New Input\n\nStart typing your markdown content here...",
           reference_markdown: "# Reference\n\nAdd reference content here...",
+          // TODO notes: "Add your notes here...",
         })
         .select()
         .single();
