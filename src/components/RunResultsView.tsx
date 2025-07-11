@@ -108,7 +108,7 @@ export const RunResultsView = ({
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-blue-50 border border-green-500">
+    <div className="h-full flex flex-col overflow-hidden">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}

@@ -192,7 +192,7 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
   };
 
   return (
-    <div className="flex-1 overflow-hidden bg-white flex flex-col border border-red-500">
+    <div className="flex-1 overflow-hidden bg-white flex flex-col border">
       {/* just the headers table */}
       <Table>
         <TableHeader>
@@ -239,8 +239,8 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
                   const hasResult = Boolean(result);
 
                   if (hasCorrect && hasResult && correct !== result) return 1; // Mismatch with correct value
-                  if (!hasCorrect && hasResult) return 2; // Unexpected extraction
-                  if (hasCorrect && hasResult && correct === result) return 3; // Match
+                  if (hasCorrect && hasResult && correct === result) return 2; // Match
+                  if (!hasCorrect && hasResult) return 3; // Unexpected extraction
                   if (!hasCorrect && !hasResult) return 4; // Both empty
                   if (hasCorrect && !hasResult) return 1; // Missing extraction (treat as high priority)
                   return 5; // Fallback
@@ -284,7 +284,7 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
                   rowClassName = "bg-yellow-50"; // Light orange for missing extracted value
                 } else if (!correctValue && resultValue) {
                   // No correct value but have result value
-                  rowClassName = "bg-blue-50"; // Light blue for unexpected value
+                  rowClassName = "bg-orange-50"; // Light blue for unexpected value
                 }
 
                 return (

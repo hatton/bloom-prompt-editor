@@ -326,12 +326,10 @@ export const EvalTab: React.FC = () => {
         <ResizableHandle withHandle />
 
         <ResizablePanel defaultSize={splitPosition[1]} minSize={20}>
-          <div className="h-full flex flex-col">
-            <div className="p-4 border-b bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Evaluation Details
-              </h2>
-            </div>
+          <div className="h-full flex flex-col bg-blue-100 p-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Evaluation Details
+            </h2>
 
             {selectedBookData ? (
               <RunResultsView

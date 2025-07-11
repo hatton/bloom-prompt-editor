@@ -141,6 +141,7 @@ export const OutputSection = ({
             )}
           </div>
         </div>
+        <br />
 
         {waitingForRun ? (
           <div className="flex-1 flex items-center justify-center">
