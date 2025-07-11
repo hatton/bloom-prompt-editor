@@ -61,6 +61,22 @@ export const PromptChooser = ({
     loadPrompts();
   }, []);
 
+  // Get unique labels and their latest prompts
+  const uniquePrompts = (() => {
+    const uniqueLabels = Array.from(
+      new Set(prompts.map((p) => p.label).filter(Boolean))
+    );
+
+    return uniqueLabels.map((label) => {
+      return prompts
+        .filter((p) => p.label === label)
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+    });
+  })();
+
   // Find the selected prompt
   const selectedPrompt = prompts.find(
     (prompt) => prompt.id === selectedPromptId
@@ -85,7 +101,7 @@ export const PromptChooser = ({
         <SelectItem value="none">
           <span className="text-gray-500">None selected</span>
         </SelectItem>
-        {prompts.map((prompt) => (
+        {uniquePrompts.map((prompt) => (
           <SelectItem key={prompt.id} value={prompt.id.toString()}>
             <div className="flex flex-col">
               <span className="font-medium">{prompt.label}</span>
