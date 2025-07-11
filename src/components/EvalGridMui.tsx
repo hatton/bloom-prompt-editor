@@ -463,12 +463,31 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
       <DataGridPro
         checkboxSelection
         onRowSelectionModelChange={(selectedRows: GridRowSelectionModel) => {
+          // Debug: Log the actual structure of selectedRows to understand what we're working with
+          console.log("selectedRows:", selectedRows);
+          console.log("selectedRows.type:", selectedRows.type);
+          console.log("selectedRows.ids:", selectedRows.ids);
+          console.log("selectedRows.ids size:", selectedRows.ids?.size);
+
           // The gridRowId is already the book ID since we use the book ID as the row ID
           // The row ID is implicitly set to the book ID through the spread operator ...item  where item.id is the book's database ID from the book-input table.
-          const selectedBookIds = Array.from(selectedRows.ids).map(
-            (gridRowId: GridRowId) => Number(gridRowId)
-          );
+          let selectedBookIds: number[] = [];
 
+          if (selectedRows.type === "exclude") {
+            // When type is 'exclude', it means "select all rows except those in the ids set"
+            // So we need to get all row IDs and exclude the ones in the set
+            const excludedIds = Array.from(selectedRows.ids || []);
+            selectedBookIds = data
+              .map((item) => item.id)
+              .filter((id) => !excludedIds.includes(id));
+          } else {
+            // When type is 'include' (or undefined), it means "select only the rows in the ids set"
+            selectedBookIds = Array.from(selectedRows.ids || []).map(
+              (gridRowId: GridRowId) => Number(gridRowId)
+            );
+          }
+
+          console.log("Final selectedBookIds:", selectedBookIds);
           onCheckboxSelectionChange?.(selectedBookIds);
         }}
         rows={rows}
