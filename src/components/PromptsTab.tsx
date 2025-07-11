@@ -491,6 +491,21 @@ export const PromptsTab = () => {
     }
   };
 
+  const copyInput = async () => {
+    try {
+      await navigator.clipboard.writeText(markdownOfSelectedInput);
+      toast({
+        title: "Input copied to clipboard",
+        duration: 1000,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy input",
+        variant: "destructive",
+      });
+    }
+  };
+
   const canGoPrevious = currentRunIndex > 0;
   const canGoNext = currentRunIndex < runs.length - 1;
 
@@ -574,7 +589,7 @@ export const PromptsTab = () => {
                   </SelectContent>
                 </Select>
 
-                <Button variant="ghost" size="sm" onClick={copyOutput}>
+                <Button variant="ghost" size="sm" onClick={copyInput}>
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>

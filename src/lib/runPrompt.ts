@@ -17,6 +17,14 @@ export interface RunResult {
 /**
  * Runs a prompt, streams the output, and creates a new run in the database.
  *
+ * @param promptId - The ID of the prompt to run (nullable)
+ * @param bookInputId - The ID of the book input
+ * @param openRouterApiKey - The OpenRouter API key
+ * @param promptSettings - Object containing promptText and temperature
+ * @param selectedModel - The model to use for the prompt
+ * @param ocrMarkdown - The OCR markdown content
+ * @param abortSignal - Signal to abort the operation
+ * @param onStream - Optional callback for streaming output chunks
  * @returns The newly created run object along with usage and finish reason data.
  * @throws An error if the run fails.
  */
@@ -30,8 +38,8 @@ export async function runPrompt(
   },
   selectedModel: string,
   ocrMarkdown: string,
-  onStream: (chunk: string) => void,
-  abortSignal: AbortSignal
+  abortSignal: AbortSignal,
+  onStream?: (chunk: string) => void
 ): Promise<RunResult> {
   // Get the stream with abort signal
   const { textStream, finishReasonPromise, usagePromise, promptParams } =
@@ -65,10 +73,13 @@ export async function runPrompt(
     result += value;
     fullResult = result;
 
-    // Use flushSync to force immediate DOM update in the calling component
-    flushSync(() => {
-      onStream(result);
-    });
+    // Only call onStream if it's provided (for streaming mode)
+    if (onStream) {
+      // Use flushSync to force immediate DOM update in the calling component
+      flushSync(() => {
+        onStream(result);
+      });
+    }
   }
 
   // After streaming completes, check the finish reason and get usage
