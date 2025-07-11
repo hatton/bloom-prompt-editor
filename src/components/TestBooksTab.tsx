@@ -102,6 +102,15 @@ export const TestBooksTab = () => {
     }
 
     try {
+      // First, delete all runs associated with this book-input
+      const { error: runDeleteError } = await supabase
+        .from("run")
+        .delete()
+        .eq("book_input_id", inputId);
+
+      if (runDeleteError) throw runDeleteError;
+
+      // Then delete the book-input
       const { error } = await supabase
         .from("book-input")
         .delete()
@@ -183,34 +192,44 @@ export const TestBooksTab = () => {
           {bookInputs.map((input) => (
             <div
               key={input.id}
-              className={`px-3 py-2 cursor-pointer transition-all group rounded-md ${
+              className={`px-3 py-2 cursor-pointer transition-all rounded-md ${
                 selectedBookId === input.id
                   ? "bg-white border-blue-600 shadow-sm border-2"
                   : "hover:bg-gray-50 border border-transparent"
               }`}
               onClick={() => handleInputSelection(input.id)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-medium text-gray-900 truncate">
-                    {input.label || "Untitled"}
-                  </h4>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteInput(input.id);
-                  }}
-                  className="text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium text-gray-900 truncate">
+                  {input.label || "Untitled"}
+                </h4>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Delete selected book link */}
+        {selectedBookId && bookInputs.length > 1 && (
+          <div className="px-3 pb-3 border-t border-gray-200 pt-3">
+            <button
+              onClick={() => deleteInput(selectedBookId)}
+              className="hover:text-red-700 text-sm "
+            >
+              🗑️ Delete "
+              {(
+                bookInputs.find((input) => input.id === selectedBookId)
+                  ?.label || "Untitled"
+              ).slice(0, 20)}
+              {(
+                bookInputs.find((input) => input.id === selectedBookId)
+                  ?.label || "Untitled"
+              ).length > 20
+                ? "..."
+                : ""}
+              "
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Content - Editor */}
