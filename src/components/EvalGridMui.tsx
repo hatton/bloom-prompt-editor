@@ -205,8 +205,7 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             runFields = runFieldSetData;
           }
 
-          // Calculate score
-          const score = book.id === 10 ? await getScore(book.id) : undefined;
+          const score = await getScore(book.id);
 
           // Get last test date for this book with selected prompt and model
           let lastTestDate: Date | null = null;
