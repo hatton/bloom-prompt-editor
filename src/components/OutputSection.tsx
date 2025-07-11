@@ -50,8 +50,10 @@ export const OutputSection = () => {
     console.log("🔄 OutputSection: currentRun state changed", {
       runId: currentRun?.id,
       finishReason: currentRun?.finish_reason,
-      output: currentRun?.output?.substring(0, 100) + (currentRun?.output && currentRun.output.length > 100 ? '...' : ''),
-      hasCurrentRun: !!currentRun
+      output:
+        currentRun?.output?.substring(0, 100) +
+        (currentRun?.output && currentRun.output.length > 100 ? "..." : ""),
+      hasCurrentRun: !!currentRun,
     });
   }, [currentRun]);
 
@@ -203,14 +205,14 @@ export const OutputSection = () => {
       });
     } catch (error) {
       console.error("❌ OutputSection: Run prompt error:", error);
-      
+
       // Check if the error contains a run result (for payment errors)
       const errorWithRunResult = error as Error & { runResult?: RunResult };
       if (errorWithRunResult.runResult) {
         console.log("📋 OutputSection: Error contains run result, using it");
         runResult = errorWithRunResult.runResult;
       }
-      
+
       if (error.name !== "AbortError" && error.message !== "Stream aborted") {
         console.error("Error running prompt:", error);
         toast({
@@ -229,19 +231,19 @@ export const OutputSection = () => {
         hasRunResult: !!runResult,
         runId: runResult?.run?.id,
         runResultType: typeof runResult,
-        runObject: runResult?.run
+        runObject: runResult?.run,
       });
-      
+
       if (runResult?.run) {
         console.log("✅ OutputSection: Setting currentRun with run data", {
           runId: runResult.run.id,
-          finishReason: runResult.run.finish_reason
+          finishReason: runResult.run.finish_reason,
         });
         setCurrentRun(runResult.run);
       } else {
         console.log("⚠️ OutputSection: No run result to set");
       }
-      
+
       setIsRunning(false);
       setAbortController(null);
     }

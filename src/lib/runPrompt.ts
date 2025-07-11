@@ -130,7 +130,7 @@ export async function runPrompt(
     // Still try to save the run for diagnostic purposes
     const discoveredFieldsId = null;
     let diagnosticRun: Run | null = null;
-    
+
     try {
       const { data: newRun, error: runError } = await supabase
         .from("run")
@@ -154,17 +154,23 @@ export async function runPrompt(
         );
         diagnosticRun = newRun;
       } else {
-        console.error("❌ runPrompt: Error creating diagnostic run record:", runError);
+        console.error(
+          "❌ runPrompt: Error creating diagnostic run record:",
+          runError
+        );
       }
     } catch (dbError) {
-      console.error("❌ runPrompt: Failed to save diagnostic run record:", dbError);
+      console.error(
+        "❌ runPrompt: Failed to save diagnostic run record:",
+        dbError
+      );
     }
 
     // Create error with run result if we have one
     const error = new Error(
       "API request failed - this may be due to insufficient credits, invalid API key, or service unavailability. Please check your OpenRouter account and API key."
     ) as Error & { runResult?: RunResult };
-    
+
     if (diagnosticRun) {
       const result: RunResult = {
         run: diagnosticRun,
@@ -173,9 +179,11 @@ export async function runPrompt(
         promptParams,
       };
       error.runResult = result;
-      console.log("📋 runPrompt: Attaching run result to error", { runId: diagnosticRun.id });
+      console.log("📋 runPrompt: Attaching run result to error", {
+        runId: diagnosticRun.id,
+      });
     }
-    
+
     throw error;
   }
 
