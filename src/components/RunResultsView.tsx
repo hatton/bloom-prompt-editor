@@ -1,13 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DiffView } from "@/components/DiffView";
+import { MarkdownDiffView } from "@/components/MarkdownDiffView";
 import { FieldsComparisonView } from "@/components/FieldsComparisonView";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
-
-type Run = Tables<"run">;
-
-type BookInput = Tables<"book-input">;
 
 interface RunResultsViewProps {
   runId: number | null;
@@ -21,63 +15,6 @@ export const RunResultsView = ({
   const [activeTab, setActiveTab] = useState<"fields" | "markdown">(() => {
     return defaultOutput;
   });
-  const [runData, setRunData] = useState<Run | null>(null);
-  const [bookInputData, setBookInputData] = useState<BookInput | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [comparisonMode, setComparisonMode] = useState("output");
-
-  useEffect(() => {
-    const fetchRunData = async () => {
-      if (!runId) {
-        setRunData(null);
-        setBookInputData(null);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("run")
-          .select("*")
-          .eq("id", runId)
-          .single();
-
-        if (error) {
-          console.error("Error fetching run data:", error);
-          setRunData(null);
-          setBookInputData(null);
-        } else {
-          setRunData(data);
-
-          // Fetch book input data if available
-          if (data.book_input_id) {
-            const { data: bookData, error: bookError } = await supabase
-              .from("book-input")
-              .select("*")
-              .eq("id", data.book_input_id)
-              .single();
-
-            if (bookError) {
-              console.error("Error fetching book input data:", bookError);
-              setBookInputData(null);
-            } else {
-              setBookInputData(bookData);
-            }
-          } else {
-            setBookInputData(null);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching run data:", error);
-        setRunData(null);
-        setBookInputData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRunData();
-  }, [runId]);
 
   const handleTabChange = (value: string) => {
     if (value === "fields" || value === "markdown") {
@@ -85,24 +22,10 @@ export const RunResultsView = ({
     }
   };
 
-  const handleCopyOutput = () => {
-    if (runData?.output) {
-      navigator.clipboard.writeText(runData.output);
-    }
-  };
-
   if (!runId) {
     return (
       <div className="flex-1 p-4 flex items-center justify-center">
         <p className="text-gray-500">No run selected</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex-1 p-4 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
       </div>
     );
   }
@@ -138,21 +61,7 @@ export const RunResultsView = ({
           value="markdown"
           className="flex-1 min-h-0 !mt-0 h-full flex flex-col data-[state=inactive]:hidden"
         >
-          {runData?.output ? (
-            <DiffView
-              output={runData.output}
-              comparisonMode={comparisonMode}
-              hasReferenceMarkdown={!!bookInputData?.reference_markdown}
-              markdownOfSelectedInput={bookInputData?.ocr_markdown || ""}
-              referenceMarkdown={bookInputData?.reference_markdown || ""}
-              onComparisonModeChange={setComparisonMode}
-              onCopyOutput={handleCopyOutput}
-            />
-          ) : (
-            <div className="flex-1 p-4 flex items-center justify-center">
-              <p className="text-gray-500">No output available</p>
-            </div>
-          )}
+          <MarkdownDiffView runId={runId} />
         </TabsContent>
       </Tabs>
     </div>
