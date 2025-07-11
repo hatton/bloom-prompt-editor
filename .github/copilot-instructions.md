@@ -41,3 +41,13 @@ The application is a React single-page application (SPA) built with Vite and Typ
 - `package.json`: Defines scripts and dependencies.
 - `vite.config.ts`: Vite configuration.
 - `tailwind.config.ts`: Tailwind CSS configuration.
+
+## Style
+
+For components that don't need children, use this style:
+
+const Foo = (props: { foo: number }) => {
+return <div>{props.foo}</div>;
+};
+
+Do not define interfaces and do not destructure props unless necessary. Use the `props` object directly.

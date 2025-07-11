@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ModelChooser } from "@/components/ModelChooser";
@@ -11,53 +12,224 @@ import {
 } from "@/components/ui/tooltip";
 import { LanguageModelUsage } from "ai";
 import type { Tables } from "@/integrations/supabase/types";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { useToast } from "@/hooks/use-toast";
+import { runPrompt, RunResult } from "@/lib/runPrompt";
+import { supabase } from "@/integrations/supabase/client";
 
 type Run = Tables<"run">;
+type BookInput = Tables<"book-input">;
 
-interface OutputSectionProps {
-  output: string;
-  isRunning: boolean;
-  selectedModel: string;
-  comparisonMode: string;
-  hasReferenceMarkdown: boolean;
-  markdownOfSelectedInput: string;
-  selectedBookId: string | null;
-  referenceMarkdown: string;
-  promptResult: null | {
-    promptParams: unknown;
-    usage: LanguageModelUsage | null;
-    outputLength: number;
-    finishReason: string;
+export const OutputSection = () => {
+  // Local storage state management
+  const [selectedModel, setSelectedModel] = useLocalStorage<string>(
+    "selectedModel",
+    "google/gemini-flash-1.5"
+  );
+  const [selectedBookId, setSelectedBookId] = useLocalStorage<number | null>(
+    "selectedBookId",
+    null
+  );
+  const [currentPromptId] = useLocalStorage<number | null>(
+    "currentPromptId",
+    null
+  );
+  const [openRouterApiKey] = useLocalStorage<string>("openRouterApiKey", "");
+
+  // Local component state
+  const [isRunning, setIsRunning] = useState(false);
+  const [output, setOutput] = useState("");
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
+  const [waitingForRun, setWaitingForRun] = useState(false);
+  const [currentRun, setCurrentRun] = useState<Run | null>(null);
+  const [currentPromptResult, setCurrentPromptResult] =
+    useState<RunResult | null>(null);
+  const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
+  const [promptSettings, setPromptSettings] = useState({
+    promptText: "",
+    temperature: 0,
+  });
+
+  const { toast } = useToast();
+
+  // Load book inputs and current prompt settings
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load book inputs
+        const { data: inputs, error: inputsError } = await supabase
+          .from("book-input")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (inputsError) throw inputsError;
+        setBookInputs(inputs || []);
+
+        // Load current prompt settings if we have a prompt ID
+        if (currentPromptId) {
+          const { data: prompt, error } = await supabase
+            .from("prompt")
+            .select("*")
+            .eq("id", currentPromptId)
+            .single();
+
+          if (prompt && !error) {
+            setPromptSettings({
+              promptText: prompt.user_prompt || "",
+              temperature: prompt.temperature ?? 0,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
+    };
+
+    loadData();
+  }, [currentPromptId]);
+
+  // Find and load the current run based on current settings
+  useEffect(() => {
+    const findCurrentRun = async () => {
+      if (!selectedBookId || !currentPromptId) {
+        setOutput("");
+        setWaitingForRun(false);
+        setCurrentRun(null);
+        setCurrentPromptResult(null);
+        return;
+      }
+
+      try {
+        const { data: run, error } = await supabase
+          .from("run")
+          .select("*")
+          .eq("prompt_id", currentPromptId)
+          .eq("book_input_id", selectedBookId)
+          .eq("temperature", promptSettings.temperature)
+          .eq("model", selectedModel)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error && error.code !== "PGRST116") {
+          throw error;
+        }
+
+        if (run) {
+          setCurrentRun(run);
+          setOutput(run.output || "");
+          setWaitingForRun(false);
+          setCurrentPromptResult(null);
+        } else {
+          setCurrentRun(null);
+          setOutput("");
+          setWaitingForRun(true);
+          setCurrentPromptResult(null);
+        }
+      } catch (error) {
+        console.error("Error finding current run:", error);
+      }
+    };
+
+    findCurrentRun();
+  }, [
+    selectedBookId,
+    currentPromptId,
+    promptSettings.temperature,
+    selectedModel,
+  ]);
+
+  const handleRun = async () => {
+    setWaitingForRun(false);
+    if (!selectedBookId) {
+      toast({
+        title: "Please select an input",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentPromptId) {
+      toast({
+        title: "No prompt selected",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!openRouterApiKey) {
+      toast({
+        title: "API Key not set",
+        description: "Please set your OpenRouter API key in the Settings tab.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedInput = bookInputs.find(
+      (input) => input.id === selectedBookId
+    );
+
+    if (!selectedInput) {
+      toast({
+        title: "Selected input not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const controller = new AbortController();
+    setAbortController(controller);
+    setIsRunning(true);
+    setOutput("");
+
+    try {
+      const runResult = await runPrompt(
+        currentPromptId,
+        selectedBookId,
+        openRouterApiKey,
+        promptSettings,
+        selectedModel,
+        selectedInput.ocr_markdown || "",
+        controller.signal,
+        setOutput
+      );
+
+      // Store the complete run result
+      setCurrentPromptResult(runResult);
+      setCurrentRun(runResult.run);
+
+      toast({
+        title: "Run completed successfully",
+      });
+    } catch (error) {
+      if (error.name !== "AbortError" && error.message !== "Stream aborted") {
+        console.error("Error running prompt:", error);
+        toast({
+          title: "Error running prompt: " + error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Run stopped",
+          duration: 1000,
+        });
+      }
+    } finally {
+      setIsRunning(false);
+      setAbortController(null);
+    }
   };
-  waitingForRun: boolean;
-  runTimestamp?: string;
-  currentRun?: Run | null;
-  onRun: () => void;
-  onStop?: () => void;
-  onModelChange: (value: string) => void;
-  onComparisonModeChange: (value: string) => void;
-  onCopyOutput: () => void;
-}
 
-export const OutputSection = ({
-  output,
-  isRunning,
-  selectedModel,
-  comparisonMode,
-  hasReferenceMarkdown,
-  selectedBookId,
-  markdownOfSelectedInput,
-  referenceMarkdown,
-  promptResult,
-  waitingForRun,
-  runTimestamp,
-  currentRun,
-  onRun,
-  onStop,
-  onModelChange,
-  onComparisonModeChange,
-  onCopyOutput,
-}: OutputSectionProps) => {
+  const handleStop = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsRunning(false);
+      setAbortController(null);
+    }
+  };
+
   const formatRunDate = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleString(undefined, {
@@ -70,9 +242,6 @@ export const OutputSection = ({
     });
   };
 
-  const handleRun = () => {
-    onRun();
-  };
   return (
     <div className="flex flex-col h-full grow gap-4">
       <Card
@@ -86,8 +255,8 @@ export const OutputSection = ({
                 <Play className="h-4 w-4 mr-2" />
                 {isRunning ? "Running..." : "Run"}
               </Button>
-              {isRunning && onStop && (
-                <Button onClick={onStop} variant="outline" size="sm">
+              {isRunning && (
+                <Button onClick={handleStop} variant="outline" size="sm">
                   <Square className="h-4 w-4 mr-2" />
                   Stop
                 </Button>
@@ -95,23 +264,22 @@ export const OutputSection = ({
             </div>
             <ModelChooser
               selectedModel={selectedModel}
-              onModelChange={onModelChange}
+              onModelChange={setSelectedModel}
             />
-            {runTimestamp && (
+            {currentRun?.created_at && (
               <span className="text-sm text-gray-600 ml-4">
-                {formatRunDate(runTimestamp)}
+                {formatRunDate(currentRun.created_at)}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2 flex-grow">
-            {promptResult && (
+            {currentPromptResult && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" variant="ghost">
-                      {/* if finishReason is not "stop", show an error icon instead of the info icon. */}
-                      {promptResult.finishReason &&
-                      promptResult.finishReason !== "stop" ? (
+                      {currentPromptResult.finishReason &&
+                      currentPromptResult.finishReason !== "stop" ? (
                         <AlertTriangle className="h-4 w-4 text-red-500" />
                       ) : (
                         <Info className="h-4 w-4" />
@@ -123,17 +291,16 @@ export const OutputSection = ({
                     className="max-w-md max-h-64 overflow-auto"
                   >
                     <pre className="text-xs whitespace-pre-wrap">
-                      {promptResult &&
-                        JSON.stringify(
-                          {
-                            finishReason: promptResult.finishReason,
-                            inputs: promptResult.promptParams,
-                            usage: promptResult.usage,
-                            outputLength: promptResult.outputLength,
-                          },
-                          null,
-                          2
-                        ).replace(/"/g, "")}
+                      {JSON.stringify(
+                        {
+                          finishReason: currentPromptResult.finishReason,
+                          inputs: currentPromptResult.promptParams,
+                          usage: currentPromptResult.usage,
+                          outputLength: output.length,
+                        },
+                        null,
+                        2
+                      ).replace(/"/g, "")}
                     </pre>
                   </TooltipContent>
                 </Tooltip>
