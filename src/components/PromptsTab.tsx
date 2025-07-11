@@ -1,5 +1,5 @@
+import { runPrompt, RunResult } from "@/lib/runPrompt";
 import { useState, useEffect, useCallback } from "react";
-import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -14,10 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import {
-  runPrompt,
-  runPromptStream,
-} from "@/integrations/openrouter/openRouterClient";
 import { MarkdownViewer } from "@/components/MarkdownViewer";
 import { OutputSection } from "@/components/OutputSection";
 import { PromptCard } from "@/components/PromptCard";
@@ -27,7 +23,6 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { LanguageModelUsage } from "ai";
-import { parseAndStoreFieldSet } from "@/lib/fieldParsing";
 
 type BookInput = Tables<"book-input">;
 type Prompt = Tables<"prompt">;
@@ -52,9 +47,6 @@ export const PromptsTab = () => {
     "input"
   );
   const [openRouterApiKey] = useLocalStorage<string>("openRouterApiKey", "");
-  const [promptParams, setPromptParams] = useState({});
-  const [finishReason, setFinishReason] = useState<string | null>(null);
-  const [usage, setUsage] = useState<LanguageModelUsage | null>(null);
 
   // Other state
   const [promptSettings, setPromptSettings] = useState({
@@ -79,6 +71,8 @@ export const PromptsTab = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [waitingForRun, setWaitingForRun] = useState(false);
+  const [currentPromptResult, setCurrentPromptResult] =
+    useState<RunResult | null>(null);
 
   const loadRun = useCallback(
     async (run: Run) => {
@@ -87,6 +81,9 @@ export const PromptsTab = () => {
         setOutput(run.output || "");
         setSelectedBookId(run.book_input_id || null);
         setIsStarred(run.human_tags?.includes("star") || false);
+
+        // Clear the current prompt result since we're loading a different run
+        setCurrentPromptResult(null);
 
         // Load run-specific settings
         if (run.model) {
@@ -97,10 +94,6 @@ export const PromptsTab = () => {
         // if (run.discovered_fields) {
         //   // Load and display the discovered field set
         // }
-
-        setPromptParams({}); // TODO: Should we store and load these?
-        setFinishReason(null); // TODO: Should we store and load these?
-        setUsage(null); // TODO: Should we store and load these?
 
         // Load the prompt for this run
         if (run.prompt_id) {
@@ -135,11 +128,9 @@ export const PromptsTab = () => {
       if (!selectedBookId || !currentPromptId) {
         setOutput("");
         setNotes("");
-        setPromptParams({});
-        setFinishReason(null);
-        setUsage(null);
         setIsStarred(false);
         setWaitingForRun(false);
+        setCurrentPromptResult(null);
         return;
       }
 
@@ -150,11 +141,9 @@ export const PromptsTab = () => {
           // No book selected, clear the output
           setOutput("");
           setNotes("");
-          setPromptParams({});
-          setFinishReason(null);
-          setUsage(null);
           setIsStarred(false);
           setWaitingForRun(false);
+          setCurrentPromptResult(null);
           return;
         }
 
@@ -184,11 +173,9 @@ export const PromptsTab = () => {
           // No run found, clear the output
           setOutput("");
           setNotes("");
-          setPromptParams({});
-          setFinishReason(null);
-          setUsage(null);
           setIsStarred(false);
           setWaitingForRun(true);
+          setCurrentPromptResult(null);
         }
       } catch (error) {
         console.error("Error finding matching run:", error);
@@ -284,27 +271,6 @@ export const PromptsTab = () => {
       setComparisonMode("input");
     }
   }, [selectedBookId, bookInputs, comparisonMode, setComparisonMode]);
-
-  // // Save prompt when component unmounts or user navigates away
-  // useEffect(() => {
-  //   const handleBeforeUnload = () => {
-  //     if (hasPromptChanged()) {
-  //       saveNewPromptIfChanged();
-  //     }
-  //   };
-
-  //   window.addEventListener("beforeunload", handleBeforeUnload);
-
-  //   return () => {
-  //     window.removeEventListener("beforeunload", handleBeforeUnload);
-
-  //     // NO: This was actually running with each keystroke
-  //     // Also save when component unmounts
-  //     // if (hasPromptChanged()) {
-  //     //   saveNewPromptIfChanged();
-  //     // }
-  //   };
-  // }, []);
 
   const hasPromptChanged = () => {
     return (
@@ -423,7 +389,6 @@ export const PromptsTab = () => {
 
   const handleRun = async () => {
     setWaitingForRun(false);
-    setFinishReason(null);
     if (!selectedBookId) {
       toast({
         title: "Please select an input",
@@ -441,143 +406,47 @@ export const PromptsTab = () => {
       return;
     }
 
-    // Create abort controller for stopping
+    const selectedInput = bookInputs.find(
+      (input) => input.id === selectedBookId
+    );
+
+    if (!selectedInput) {
+      toast({
+        title: "Selected input not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const controller = new AbortController();
     setAbortController(controller);
     setIsRunning(true);
-    setOutput(""); // Clear previous output
+    setOutput("");
 
     try {
-      // Save new prompt if changed before running
       const promptId = await saveNewPromptIfChanged();
 
-      const selectedInput = bookInputs.find(
-        (input) => input.id === selectedBookId
+      const runResult = await runPrompt(
+        promptId,
+        selectedBookId,
+        openRouterApiKey,
+        promptSettings,
+        selectedModel,
+        selectedInput.ocr_markdown || "",
+        setOutput,
+        controller.signal
       );
 
-      if (!selectedInput) {
-        toast({
-          title: "Selected input not found",
-          variant: "destructive",
-        });
-        setIsRunning(false);
-        setAbortController(null);
-        return;
-      }
+      // Store the complete run result for use in promptResult prop
+      setCurrentPromptResult(runResult);
 
-      // Get the stream with abort signal
-      const { textStream, promptParams, finishReasonPromise, usagePromise } =
-        await runPromptStream(
-          promptSettings.promptText,
-          selectedInput.ocr_markdown || "",
-          selectedModel,
-          openRouterApiKey,
-          promptSettings.temperature,
-          controller.signal
-        );
-      setPromptParams(promptParams);
-      let fullResult = "";
+      // Update local state with the new run
+      setRuns((prev) => [runResult.run, ...prev]);
+      setCurrentRunIndex(0);
 
-      // Process stream with abort support
-      const processStreamInBackground = async () => {
-        try {
-          const reader = textStream.getReader();
-          let result = "";
-
-          while (true) {
-            // Check if abort was requested before reading
-            if (controller.signal.aborted) {
-              reader.releaseLock();
-              throw new DOMException("Stream aborted", "AbortError");
-            }
-
-            const { done, value } = await reader.read();
-
-            if (done) {
-              reader.releaseLock();
-              break;
-            }
-
-            result += value;
-            fullResult = result;
-
-            // Use flushSync to force immediate DOM update
-            flushSync(() => {
-              setOutput(result);
-            });
-          }
-
-          return result;
-        } catch (error) {
-          if (
-            error.name === "AbortError" ||
-            error.message === "Stream aborted"
-          ) {
-            console.log("Stream was aborted by user");
-            return fullResult; // Return partial result
-          }
-          console.error("Stream processing error:", error);
-          throw error;
-        }
-      };
-
-      // Start the streaming
-      fullResult = await processStreamInBackground();
-
-      // Set finish reason after streaming completes
-      try {
-        const finishReasonValue = await finishReasonPromise;
-        setFinishReason(finishReasonValue);
-        setUsage(await usagePromise);
-      } catch (error) {
-        console.error("Error getting finish reason:", error);
-      }
-
-      if (finishReason && finishReason !== "stop") {
-        if (finishReason === "length") {
-          throw new Error(
-            `Ran out of tokens before finishing (max tokens reached)`
-          );
-        }
-        throw new Error(`Streaming finished with reason: ${finishReason}`);
-      }
-      // Only save to database if not aborted
-      if (!controller.signal.aborted) {
-        // Parse fields from the output and create a field-set
-        let discoveredFieldsId = null;
-        try {
-          discoveredFieldsId = await parseAndStoreFieldSet(fullResult);
-          console.log("Created field set with ID:", discoveredFieldsId);
-        } catch (error) {
-          console.error("Error parsing and storing field set:", error);
-          // Continue with run creation even if field parsing fails
-        }
-
-        // Create new run with the complete result
-        const { data: newRun, error: runError } = await supabase
-          .from("run")
-          .insert({
-            prompt_id: promptId,
-            book_input_id: selectedBookId!,
-            output: fullResult,
-            temperature: promptSettings.temperature,
-            model: selectedModel,
-            notes: notes,
-            discovered_fields: discoveredFieldsId,
-          })
-          .select()
-          .single();
-
-        if (runError) throw runError;
-
-        // Update local state
-        setRuns((prev) => [newRun, ...prev]);
-        setCurrentRunIndex(0);
-
-        toast({
-          title: "Run completed successfully",
-        });
-      }
+      toast({
+        title: "Run completed successfully",
+      });
     } catch (error) {
       if (error.name !== "AbortError" && error.message !== "Stream aborted") {
         console.error("Error running prompt:", error);
@@ -747,12 +616,17 @@ export const PromptsTab = () => {
               waitingForRun={waitingForRun}
               runTimestamp={runs[currentRunIndex]?.created_at}
               currentRun={runs[currentRunIndex] || null}
-              promptResult={{
-                promptParams,
-                finishReason,
-                usage,
-                outputLength: output.length,
-              }}
+              promptResult={
+                currentPromptResult
+                  ? {
+                      promptParams: currentPromptResult.promptParams,
+                      usage: currentPromptResult.usage,
+                      outputLength: output.length,
+                      finishReason:
+                        currentPromptResult.finishReason || "unknown",
+                    }
+                  : null
+              }
             />
           </ResizablePanel>
         </ResizablePanelGroup>
