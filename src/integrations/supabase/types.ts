@@ -162,37 +162,46 @@ export type Database = {
           book_input_id: number | null
           created_at: string
           discovered_fields: number | null
+          finish_reason: string | null
           human_tags: string[] | null
           id: number
           model: string | null
           notes: string | null
           output: string | null
           prompt_id: number | null
+          seconds_used: number | null
           temperature: number | null
+          tokens_used: number | null
         }
         Insert: {
           book_input_id?: number | null
           created_at?: string
           discovered_fields?: number | null
+          finish_reason?: string | null
           human_tags?: string[] | null
           id?: number
           model?: string | null
           notes?: string | null
           output?: string | null
           prompt_id?: number | null
+          seconds_used?: number | null
           temperature?: number | null
+          tokens_used?: number | null
         }
         Update: {
           book_input_id?: number | null
           created_at?: string
           discovered_fields?: number | null
+          finish_reason?: string | null
           human_tags?: string[] | null
           id?: number
           model?: string | null
           notes?: string | null
           output?: string | null
           prompt_id?: number | null
+          seconds_used?: number | null
           temperature?: number | null
+          tokens_used?: number | null
         }
         Relationships: [
           {

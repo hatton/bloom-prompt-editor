@@ -44,6 +44,7 @@ interface PromptCardProps {
   currentPromptId?: number | null;
   label?: string;
   onLabelChange?: (label: string) => void;
+  onPromptLoad?: (promptId: number) => void;
 }
 
 export const PromptCard = ({
@@ -53,6 +54,7 @@ export const PromptCard = ({
   currentPromptId,
   label = "",
   onLabelChange,
+  onPromptLoad,
 }: PromptCardProps) => {
   const { toast } = useToast();
   const [inputValue, setInputValue] = useState(label);
@@ -153,6 +155,10 @@ export const PromptCard = ({
     onLabelChange?.(savedPrompt.label || "");
     setInputValue(savedPrompt.label || "");
     setIsOpen(false);
+    
+    // Notify parent component that a prompt was loaded
+    onPromptLoad?.(savedPrompt.id);
+    
     toast({
       title: `Loaded prompt: ${savedPrompt.label}`,
       duration: 1500,

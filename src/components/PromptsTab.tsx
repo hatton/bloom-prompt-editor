@@ -320,6 +320,7 @@ export const PromptsTab = () => {
               currentPromptId={currentPromptId}
               label={promptLabel}
               onLabelChange={setPromptLabel}
+              onPromptLoad={setCurrentPromptId}
             />
           </ResizablePanel>
           <ResizableHandle />

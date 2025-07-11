@@ -115,6 +115,9 @@ export async function runPrompt(
       temperature: promptSettings.temperature,
       model: selectedModel,
       discovered_fields: discoveredFieldsId,
+      tokens_used: usage?.totalTokens || 0,
+      finish_reason: finishReason,
+      //seconds_used: usage?. || 0,
     })
     .select()
     .single();

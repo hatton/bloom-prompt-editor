@@ -3,19 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ModelChooser } from "@/components/ModelChooser";
 import { RunResultsView } from "@/components/RunResultsView";
-import { Play, Square, Info, AlertTriangle } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { LanguageModelUsage } from "ai";
+import { Play, Square } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useToast } from "@/hooks/use-toast";
 import { runPrompt, RunResult } from "@/lib/runPrompt";
 import { supabase } from "@/integrations/supabase/client";
+import { getMostRecentRunWithPromptAndModel } from "@/lib/runUtils";
 
 type Run = Tables<"run">;
 type BookInput = Tables<"book-input">;
@@ -43,8 +37,6 @@ export const OutputSection = () => {
     useState<AbortController | null>(null);
   const [waitingForRun, setWaitingForRun] = useState(false);
   const [currentRun, setCurrentRun] = useState<Run | null>(null);
-  const [currentPromptResult, setCurrentPromptResult] =
-    useState<RunResult | null>(null);
   const [bookInputs, setBookInputs] = useState<BookInput[]>([]);
   const [promptSettings, setPromptSettings] = useState({
     promptText: "",
@@ -89,56 +81,19 @@ export const OutputSection = () => {
     loadData();
   }, [currentPromptId]);
 
-  // Find and load the current run based on current settings
   useEffect(() => {
-    const findCurrentRun = async () => {
-      if (!selectedBookId || !currentPromptId) {
-        setOutput("");
-        setWaitingForRun(false);
-        setCurrentRun(null);
-        setCurrentPromptResult(null);
-        return;
-      }
+    const fetchCurrentRun = async () => {
+      const info = await getMostRecentRunWithPromptAndModel(
+        selectedBookId,
+        currentPromptId,
+        selectedModel
+      );
 
-      try {
-        const { data: run, error } = await supabase
-          .from("run")
-          .select("*")
-          .eq("prompt_id", currentPromptId)
-          .eq("book_input_id", selectedBookId)
-          .eq("temperature", promptSettings.temperature)
-          .eq("model", selectedModel)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (error && error.code !== "PGRST116") {
-          throw error;
-        }
-
-        if (run) {
-          setCurrentRun(run);
-          setOutput(run.output || "");
-          setWaitingForRun(false);
-          setCurrentPromptResult(null);
-        } else {
-          setCurrentRun(null);
-          setOutput("");
-          setWaitingForRun(true);
-          setCurrentPromptResult(null);
-        }
-      } catch (error) {
-        console.error("Error finding current run:", error);
-      }
+      setCurrentRun(info);
     };
 
-    findCurrentRun();
-  }, [
-    selectedBookId,
-    currentPromptId,
-    promptSettings.temperature,
-    selectedModel,
-  ]);
+    fetchCurrentRun();
+  }, [selectedBookId, currentPromptId, selectedModel]);
 
   const handleRun = async () => {
     setWaitingForRun(false);
@@ -197,7 +152,6 @@ export const OutputSection = () => {
       );
 
       // Store the complete run result
-      setCurrentPromptResult(runResult);
       setCurrentRun(runResult.run);
 
       toast({
@@ -266,46 +220,6 @@ export const OutputSection = () => {
               selectedModel={selectedModel}
               onModelChange={setSelectedModel}
             />
-            {currentRun?.created_at && (
-              <span className="text-sm text-gray-600 ml-4">
-                {formatRunDate(currentRun.created_at)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 flex-grow">
-            {currentPromptResult && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button size="sm" variant="ghost">
-                      {currentPromptResult.finishReason &&
-                      currentPromptResult.finishReason !== "stop" ? (
-                        <AlertTriangle className="h-4 w-4 text-red-500" />
-                      ) : (
-                        <Info className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="left"
-                    className="max-w-md max-h-64 overflow-auto"
-                  >
-                    <pre className="text-xs whitespace-pre-wrap">
-                      {JSON.stringify(
-                        {
-                          finishReason: currentPromptResult.finishReason,
-                          inputs: currentPromptResult.promptParams,
-                          usage: currentPromptResult.usage,
-                          outputLength: output.length,
-                        },
-                        null,
-                        2
-                      ).replace(/"/g, "")}
-                    </pre>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
           </div>
         </div>
         <br />
