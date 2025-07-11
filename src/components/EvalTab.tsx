@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
 import { RunLogDialog } from "@/components/RunLogDialog";
 import { EvalGridMui } from "@/components/EvalGridMui";
-import { FieldsComparisonView } from "@/components/FieldsComparisonView";
+import { RunResultsView } from "@/components/RunResultsView";
 import { ModelChooser } from "@/components/ModelChooser";
 import { PromptChooser } from "@/components/PromptChooser";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
@@ -334,7 +334,10 @@ export const EvalTab: React.FC = () => {
             </div>
 
             {selectedBookData ? (
-              <FieldsComparisonView runId={selectedBookData.runId} />
+              <RunResultsView
+                runId={selectedBookData.runId}
+                defaultOutput="fields"
+              />
             ) : (
               <div className="flex-1 p-4 overflow-auto">
                 <div className="text-center text-gray-500 mt-8">

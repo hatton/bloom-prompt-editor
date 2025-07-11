@@ -1,11 +1,8 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ModelChooser } from "@/components/ModelChooser";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RunResultsView } from "@/components/RunResultsView";
 import { Play, Square, Info, AlertTriangle } from "lucide-react";
-import { DiffView } from "@/components/DiffView";
-import { FieldsComparisonView } from "@/components/FieldsComparisonView";
 import {
   Tooltip,
   TooltipContent,
@@ -61,8 +58,6 @@ export const OutputSection = ({
   onComparisonModeChange,
   onCopyOutput,
 }: OutputSectionProps) => {
-  const [activeTab, setActiveTab] = useState("diff");
-
   const formatRunDate = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleString(undefined, {
@@ -76,7 +71,6 @@ export const OutputSection = ({
   };
 
   const handleRun = () => {
-    setActiveTab("diff"); // Switch to Markdown tab when Run is clicked
     onRun();
   };
   return (
@@ -153,46 +147,10 @@ export const OutputSection = ({
             <p className="text-lg text-gray-500">Waiting for Run</p>
           </div>
         ) : (
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="flex-1 flex flex-col min-h-0 grow mt-[15px]"
-          >
-            <TabsList className="flex gap-2 !bg-transparent !border-none !p-0 h-auto justify-start">
-              <TabsTrigger
-                value="fields"
-                className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none"
-              >
-                Fields
-              </TabsTrigger>
-              <TabsTrigger
-                value="diff"
-                className="px-4 py-2 !bg-transparent data-[state=active]:!bg-white data-[state=active]:!font-bold !border-none !rounded-t-md !rounded-b-none"
-              >
-                Markdown
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent
-              value="fields"
-              className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
-            >
-              <FieldsComparisonView runId={currentRun?.id || null} />
-            </TabsContent>
-            <TabsContent
-              value="diff"
-              className="flex-1 min-h-0 !mt-0 grow flex flex-col data-[state=inactive]:hidden"
-            >
-              <DiffView
-                output={output}
-                comparisonMode={comparisonMode}
-                hasReferenceMarkdown={hasReferenceMarkdown}
-                markdownOfSelectedInput={markdownOfSelectedInput}
-                referenceMarkdown={referenceMarkdown}
-                onComparisonModeChange={onComparisonModeChange}
-                onCopyOutput={onCopyOutput}
-              />
-            </TabsContent>
-          </Tabs>
+          <RunResultsView
+            runId={currentRun?.id || null}
+            defaultOutput="markdown"
+          />
         )}
       </Card>
     </div>
