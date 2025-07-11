@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -13,7 +13,10 @@ import { ModelChooser } from "@/components/ModelChooser";
 import { PromptChooser } from "@/components/PromptChooser";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { useSettings } from "@/hooks/useSettings";
-import { getMostRecentRunFieldSetId } from "@/lib/runUtils";
+import {
+  getMostRecentRunFieldSetId,
+  getMostRecentRunFieldSetIdWithPromptAndModel,
+} from "@/lib/runUtils";
 import { runPrompt } from "@/lib/runPrompt";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -80,8 +83,13 @@ export const EvalTab: React.FC = () => {
           return;
         }
 
-        // Get the most recent run's field-set ID
-        const recentRunFieldSetId = await getMostRecentRunFieldSetId(bookId);
+        // Get the most recent run's field-set ID that matches the selected prompt and model
+        const recentRunFieldSetId =
+          await getMostRecentRunFieldSetIdWithPromptAndModel(
+            bookId,
+            selectedPromptId,
+            selectedModel
+          );
 
         setSelectedBookData({
           correctFieldSetId: bookInput.correct_fields,
@@ -92,7 +100,7 @@ export const EvalTab: React.FC = () => {
         setSelectedBookData(null);
       }
     },
-    [setSelectedBookId]
+    [setSelectedBookId, selectedPromptId, selectedModel]
   );
 
   // Handle checkbox selection change from the grid
@@ -275,6 +283,11 @@ export const EvalTab: React.FC = () => {
     setRunLog([]);
     setIsRunning(false);
   }, []);
+
+  // Refresh the evaluation grid when prompt or model changes
+  useEffect(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, [selectedPromptId, selectedModel]);
 
   return (
     <div className="h-full w-full">

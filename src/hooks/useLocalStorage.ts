@@ -14,6 +14,6 @@ export function useLocalStorage<T>(
     defaultValue,
     storageSync: true, // This enables cross-tab synchronization
   });
-  
+
   return [value, setValue];
 }

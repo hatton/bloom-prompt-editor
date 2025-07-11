@@ -18,7 +18,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, Database } from "@/integrations/supabase/types";
 import { getScore } from "@/lib/scoring";
-import { getMostRecentRunFieldSetId } from "@/lib/runUtils";
+import {
+  getMostRecentRunFieldSetId,
+  getMostRecentRunFieldSetIdWithPromptAndModel,
+} from "@/lib/runUtils";
 import { getMetadataFields } from "@/components/FieldSetEditor";
 
 type BookInput = Database["public"]["Tables"]["book-input"]["Row"];
@@ -185,9 +188,14 @@ export const EvalGridMui: React.FC<EvalGridMuiProps> = ({
             correctFields = fieldSetData;
           }
 
-          // Get run field-set data from the most recent run
+          // Get run field-set data from the most recent run that matches the selected prompt and model
           let runFields = null;
-          const recentRunFieldSetId = await getMostRecentRunFieldSetId(book.id);
+          const recentRunFieldSetId =
+            await getMostRecentRunFieldSetIdWithPromptAndModel(
+              book.id,
+              selectedPromptId,
+              selectedModel
+            );
           if (recentRunFieldSetId) {
             const { data: runFieldSetData } = await supabase
               .from("field-set")
