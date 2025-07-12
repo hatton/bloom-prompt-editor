@@ -12,10 +12,6 @@ type FieldSet = Tables<"field-set">;
 export async function getScore(
   inputBookId: number
 ): Promise<number | undefined> {
-  console.log(
-    `[getScore] Starting calculation for inputBookId: ${inputBookId}`
-  );
-
   try {
     // Get the test book with its correct_fields reference
     //console.log(`[getScore] Fetching test book data...`);

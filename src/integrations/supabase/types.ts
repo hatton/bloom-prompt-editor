@@ -166,6 +166,7 @@ export type Database = {
           created_at: string
           discovered_fields: number | null
           finish_reason: string | null
+          generation_data: Json | null
           human_tags: string[] | null
           id: number
           model: string | null
@@ -181,6 +182,7 @@ export type Database = {
           created_at?: string
           discovered_fields?: number | null
           finish_reason?: string | null
+          generation_data?: Json | null
           human_tags?: string[] | null
           id?: number
           model?: string | null
@@ -196,6 +198,7 @@ export type Database = {
           created_at?: string
           discovered_fields?: number | null
           finish_reason?: string | null
+          generation_data?: Json | null
           human_tags?: string[] | null
           id?: number
           model?: string | null

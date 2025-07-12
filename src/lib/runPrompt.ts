@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
-import { runPromptStream } from "@/integrations/openrouter/openRouterClient";
+import {
+  runPromptStream,
+  getGenerationData,
+} from "@/integrations/openrouter/openRouterClient";
 import { parseAndStoreFieldSet } from "@/lib/fieldParsing";
 import { flushSync } from "react-dom";
 import { LanguageModelUsage } from "ai";
@@ -52,15 +55,20 @@ export async function runPrompt(
   });
 
   // Get the stream with abort signal
-  const { textStream, finishReasonPromise, usagePromise, promptParams } =
-    await runPromptStream(
-      promptSettings.promptText,
-      ocrMarkdown,
-      selectedModel,
-      openRouterApiKey,
-      promptSettings.temperature,
-      abortSignal
-    );
+  const {
+    textStream,
+    finishReasonPromise,
+    usagePromise,
+    promptParams,
+    responsePromise,
+  } = await runPromptStream(
+    promptSettings.promptText,
+    ocrMarkdown,
+    selectedModel,
+    openRouterApiKey,
+    promptSettings.temperature,
+    abortSignal
+  );
 
   console.log("📡 runPrompt: Got stream from runPromptStream", {
     promptParams,
@@ -297,6 +305,110 @@ export async function runPrompt(
     finishReason,
     totalTokens: usage?.totalTokens,
   });
+
+  // Fetch generation data from OpenRouter using the response metadata
+  console.log("📊 runPrompt: Fetching generation data from OpenRouter...");
+  try {
+    const response = await responsePromise;
+
+    console.log("🔍 runPrompt: Full response metadata", {
+      response,
+      responseKeys: Object.keys(response),
+      id: response.id,
+      modelId: response.modelId,
+      timestamp: response.timestamp,
+      headers: response.headers,
+    });
+
+    // Try to find the generation ID from various possible sources
+    let generationId = response.id;
+
+    // Check if the generation ID is in the headers
+    if (response.headers && response.headers["x-generation-id"]) {
+      generationId = response.headers["x-generation-id"];
+      console.log("🔍 runPrompt: Found generation ID in headers", {
+        generationId,
+      });
+    } else if (
+      response.headers &&
+      response.headers["openrouter-generation-id"]
+    ) {
+      generationId = response.headers["openrouter-generation-id"];
+      console.log("🔍 runPrompt: Found generation ID in openrouter headers", {
+        generationId,
+      });
+    } else {
+      console.log("🔍 runPrompt: Using response ID as generation ID", {
+        generationId,
+        responseId: response.id,
+        modelId: response.modelId,
+      });
+    }
+
+    if (generationId) {
+      // Wait a moment for OpenRouter to process the generation data
+      console.log(
+        "⏳ runPrompt: Waiting 2 seconds for generation data to be available..."
+      );
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const generationData = await getGenerationData(
+        generationId,
+        openRouterApiKey
+      );
+
+      if (generationData) {
+        console.log(
+          "✅ runPrompt: Successfully fetched generation data",
+          generationData
+        );
+
+        // Print generation data to console for debugging
+        console.log("🔍 Generation Data Details:", {
+          model: generationData.model,
+          generation_time: `${(generationData.generation_time / 1000).toFixed(
+            1
+          )} seconds`,
+          latency: `${(generationData.latency / 1000).toFixed(1)} seconds`,
+          cancelled: generationData.cancelled,
+          tokens_prompt: generationData.tokens_prompt,
+          tokens_completion: generationData.tokens_completion,
+          native_tokens_prompt: generationData.native_tokens_prompt,
+          native_tokens_completion: generationData.native_tokens_completion,
+          native_tokens_reasoning: generationData.native_tokens_reasoning,
+          usage: `${Math.round(generationData.usage * 100)} cents`,
+          finish_reason: generationData.finish_reason,
+        });
+
+        // Update the run record with generation data
+        const { error: updateError } = await supabase
+          .from("run")
+          .update({
+            generation_data: JSON.parse(JSON.stringify(generationData)),
+          })
+          .eq("id", newRun.id);
+
+        if (updateError) {
+          console.error(
+            "❌ runPrompt: Error updating run with generation data:",
+            updateError
+          );
+        } else {
+          console.log(
+            "💾 runPrompt: Successfully updated run with generation data"
+          );
+        }
+      } else {
+        console.log(
+          "⚠️ runPrompt: No generation data returned from OpenRouter"
+        );
+      }
+    } else {
+      console.log("⚠️ runPrompt: No generation ID found in response");
+    }
+  } catch (error) {
+    console.error("❌ runPrompt: Error fetching generation data:", error);
+  }
 
   return {
     run: newRun,

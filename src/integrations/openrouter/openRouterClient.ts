@@ -11,6 +11,36 @@ interface OpenRouterModel {
   name: string;
 }
 
+export interface GenerationData {
+  id: string;
+  total_cost: number;
+  created_at: string;
+  model: string;
+  origin: string;
+  usage: number;
+  is_byok: boolean;
+  upstream_id: string;
+  cache_discount: number;
+  upstream_inference_cost: number;
+  app_id: number | null;
+  streamed: boolean;
+  cancelled: boolean;
+  provider_name: string;
+  latency: number;
+  moderation_latency: number | null;
+  generation_time: number;
+  finish_reason: string;
+  native_finish_reason: string;
+  tokens_prompt: number;
+  tokens_completion: number;
+  native_tokens_prompt: number;
+  native_tokens_completion: number;
+  native_tokens_reasoning: number;
+  num_media_prompt: number | null;
+  num_media_completion: number | null;
+  num_search_results: number | null;
+}
+
 let cachedModels: OpenRouterModel[] = [];
 
 export async function getModels(): Promise<OpenRouterModel[]> {
@@ -133,5 +163,52 @@ export async function runPromptStream(
     },
     finishReasonPromise: result.finishReason,
     usagePromise: result.usage,
+    responsePromise: result.response,
   };
+}
+
+export async function getGenerationData(
+  generationId: string,
+  apiKey: string
+): Promise<GenerationData | null> {
+  try {
+    const url = new URL("https://openrouter.ai/api/v1/generation");
+    url.searchParams.append("id", generationId);
+
+    console.log("🔍 OpenRouter: Fetching generation data", {
+      url: url.toString(),
+      generationId,
+    });
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("❌ OpenRouter: Error fetching generation data", {
+        status: response.status,
+        statusText: response.statusText,
+        generationId,
+      });
+      return null;
+    }
+
+    const result = await response.json();
+    console.log("✅ OpenRouter: Raw generation response", result);
+
+    // OpenRouter returns data in a 'data' property
+    const data = result.data;
+    if (!data) {
+      console.error("❌ OpenRouter: No data property in response", result);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error("❌ OpenRouter: Error fetching generation data:", error);
+    return null;
+  }
 }
