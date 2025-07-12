@@ -225,7 +225,7 @@ export const EvalTab: React.FC = () => {
 
       const promptSettings = {
         promptText: promptData.user_prompt,
-        temperature: promptData.temperature || 0.7,
+        temperature: promptData.temperature || 0.0,
       };
 
       // Run tests for each selected book

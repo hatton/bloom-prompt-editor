@@ -198,7 +198,7 @@ export const FieldsComparisonView = ({ runId }: FieldsComparisonViewProps) => {
             <TableHead className="w-[200px] text-left">Field</TableHead>
             <TableHead className="w-[200px] text-left">Correct</TableHead>
             <TableHead className="w-[200px] text-left">This Run</TableHead>
-            <TableHead className="w-[80px] text-left">Actions</TableHead>
+            <TableHead className="w-[80px] text-left">Match</TableHead>
           </TableRow>
         </TableHeader>
       </Table>
