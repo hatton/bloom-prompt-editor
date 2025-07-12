@@ -37,6 +37,33 @@ export const fieldDefinitions = [
 ];
 
 /**
+ * Remove markdown formatting from text
+ */
+const cleanMarkdown = (text: string): string => {
+  return (
+    text
+      // Remove headers (# ## ### etc.)
+      .replace(/^#+\s*/gm, "")
+      // Remove bold (**text** or __text__)
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/__(.*?)__/g, "$1")
+      // Remove italic (*text* or _text_)
+      .replace(/\*(.*?)\*/g, "$1")
+      .replace(/_(.*?)_/g, "$1")
+      // Remove strikethrough (~~text~~)
+      .replace(/~~(.*?)~~/g, "$1")
+      // Remove inline code (`text`)
+      .replace(/`(.*?)`/g, "$1")
+      // Remove links [text](url) -> text
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+      // Remove reference links [text][ref] -> text
+      .replace(/\[([^\]]*)\]\[[^\]]*\]/g, "$1")
+      // Trim whitespace
+      .trim()
+  );
+};
+
+/**
  * Extract field value from markdown based on comment blocks
  */
 export const extractField = (markdown: string, fieldName: string): string => {
@@ -51,13 +78,65 @@ export const extractField = (markdown: string, fieldName: string): string => {
   const startIndex = match.index! + match[0].length;
   const remainingText = markdown.substring(startIndex);
 
-  // Find the next comment block or end of document
+  // Find the next comment block, image, or end of document
   const nextCommentMatch = remainingText.match(/<!--/);
-  const endIndex = nextCommentMatch
-    ? nextCommentMatch.index!
-    : remainingText.length;
+  const nextImageMatch = remainingText.match(/!\[.*?\]\(.*?\)/);
 
-  return remainingText.substring(0, endIndex).trim();
+  let endIndex = remainingText.length;
+
+  if (nextCommentMatch && nextImageMatch) {
+    endIndex = Math.min(nextCommentMatch.index!, nextImageMatch.index!);
+  } else if (nextCommentMatch) {
+    endIndex = nextCommentMatch.index!;
+  } else if (nextImageMatch) {
+    endIndex = nextImageMatch.index!;
+  }
+
+  const extractedValue = remainingText.substring(0, endIndex).trim();
+  return cleanMarkdown(extractedValue);
+};
+
+/**
+ * Extract multiple occurrences of a field from markdown
+ */
+const extractMultipleFields = (
+  markdown: string,
+  fieldName: string
+): string[] => {
+  if (!markdown) return [];
+
+  const results: string[] = [];
+  const commentRegex = new RegExp(
+    `<!--[^>]*field="${fieldName}"[^>]*-->`,
+    "gi"
+  );
+  let match;
+
+  while ((match = commentRegex.exec(markdown)) !== null) {
+    const startIndex = match.index + match[0].length;
+    const remainingText = markdown.substring(startIndex);
+
+    // Find the next comment block, image, or end of document
+    const nextCommentMatch = remainingText.match(/<!--/);
+    const nextImageMatch = remainingText.match(/!\[.*?\]\(.*?\)/);
+
+    let endIndex = remainingText.length;
+
+    if (nextCommentMatch && nextImageMatch) {
+      endIndex = Math.min(nextCommentMatch.index!, nextImageMatch.index!);
+    } else if (nextCommentMatch) {
+      endIndex = nextCommentMatch.index!;
+    } else if (nextImageMatch) {
+      endIndex = nextImageMatch.index!;
+    }
+
+    const extractedValue = remainingText.substring(0, endIndex).trim();
+    if (extractedValue) {
+      results.push(cleanMarkdown(extractedValue));
+    }
+  }
+
+  return results;
 };
 
 /**
@@ -79,12 +158,34 @@ export const parseAndStoreFieldSet = async (
   // Extract all field values from the markdown
   const fieldValues: FieldSetInsert = {};
 
+  // Special handling for bookTitle field - extract multiple occurrences
+  const bookTitles = extractMultipleFields(markdown, "bookTitle");
+
+  // Use type assertion with a record type for dynamic field assignment
+  const recordValues = fieldValues as Record<string, string>;
+
+  // Assign first bookTitle to title_l1, second to title_l2
+  if (bookTitles.length > 0) {
+    recordValues["title_l1"] = bookTitles[0];
+  } else {
+    recordValues["title_l1"] = "empty";
+  }
+
+  if (bookTitles.length > 1) {
+    recordValues["title_l2"] = bookTitles[1];
+  } else {
+    recordValues["title_l2"] = "empty";
+  }
+
+  // Extract all other field values from the markdown
   fieldDefinitions.forEach((field) => {
+    // Skip title_l1 and title_l2 as they are handled by bookTitle above
+    if (field.dbFieldName === "title_l1" || field.dbFieldName === "title_l2") {
+      return;
+    }
+
     const fieldName = field.markdownFieldName || field.dbFieldName;
     const extractedValue = extractField(markdown, fieldName);
-
-    // Use type assertion with a record type for dynamic field assignment
-    const recordValues = fieldValues as Record<string, string>;
 
     if (extractedValue) {
       recordValues[field.dbFieldName] = extractedValue;
